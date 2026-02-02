@@ -24,12 +24,21 @@ catalogs:
     '@hono/node-server':
       specifier: 1.19.1
       version: 1.19.1
+    '@solana/spl-token':
+      specifier: 0.4.13
+      version: 0.4.13
+    '@solana/web3.js':
+      specifier: 1.98.4
+      version: 1.98.4
     '@supabase/supabase-js':
       specifier: 2.45.0
       version: 2.45.0
     '@types/node':
       specifier: 20.19.11
       version: 20.19.11
+    bs58:
+      specifier: 4.0.1
+      version: 4.0.1
     eslint:
       specifier: 9.34.0
       version: 9.34.0
@@ -110,9 +119,18 @@ importers:
       '@openclawd/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@solana/spl-token':
+        specifier: 'catalog:'
+        version: 0.4.13(@solana/web3.js@1.98.4(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.2)(utf-8-validate@5.0.10))(bufferutil@4.1.0)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(utf-8-validate@5.0.10)
+      '@solana/web3.js':
+        specifier: 'catalog:'
+        version: 1.98.4(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.2)(utf-8-validate@5.0.10)
       '@supabase/supabase-js':
         specifier: 'catalog:'
         version: 2.45.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      bs58:
+        specifier: 'catalog:'
+        version: 4.0.1
       hono:
         specifier: 'catalog:'
         version: 4.9.0
