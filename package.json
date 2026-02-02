@@ -1,6 +1,9 @@
 {
   "packageManager": "pnpm@10.12.1",
   "private": true,
+  "scripts": {
+    "test": "tsx --test apps/api/src/**/*.test.ts"
+  },
   "devDependencies": {
     "@eslint/js": "catalog:",
     "eslint": "catalog:",
