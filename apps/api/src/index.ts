@@ -2,13 +2,12 @@ import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import type { Context } from "hono";
 
-import { AuthError, InsufficientBalanceError, InvalidRequestError } from "./lib/errors.js";
+import { AuthError, InsufficientBalanceError, InvalidRequestError, ForbiddenError } from "./lib/errors.js";
 import { authRoutes } from "./routes/auth.js";
 import { creditsRoutes } from "./routes/credits.js";
-
-// Placeholder route imports - uncomment and update as routes are implemented
-// import { walletRoutes } from "./routes/wallet.js";
-// import { paymentRoutes } from "./routes/payment.js";
+import { stripeRoutes } from "./routes/stripe.js";
+import { gatewayRoutes } from "./routes/gateway.js";
+import { adminRoutes } from "./routes/admin.js";
 
 const app = new Hono();
 
@@ -37,6 +36,13 @@ app.onError((err: Error, c: Context) => {
     );
   }
 
+  if (err instanceof ForbiddenError) {
+    return c.json(
+      { error: "Forbidden", message: err.message },
+      403
+    );
+  }
+
   return c.json(
     { error: "Internal server error", message: "An unexpected error occurred" },
     500
@@ -52,11 +58,12 @@ app.get("/health", (c: Context) => {
   return c.json({ status: "healthy", timestamp: new Date().toISOString() });
 });
 
-// Mount route handlers - uncomment as routes are implemented
+// Mount route handlers
 app.route("/auth", authRoutes);
-// app.route("/wallet", walletRoutes);
-// app.route("/payment", paymentRoutes);
 app.route("/credits", creditsRoutes);
+app.route("/stripe", stripeRoutes);
+app.route("/gateway", gatewayRoutes);
+app.route("/admin", adminRoutes);
 
 // Export for Vercel edge functions
 export default app;

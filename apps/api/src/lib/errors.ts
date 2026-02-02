@@ -36,3 +36,16 @@ export class InvalidRequestError extends Error {
     Object.setPrototypeOf(this, InvalidRequestError.prototype);
   }
 }
+
+/**
+ * Custom error class for forbidden access.
+ * Thrown when a user does not have permission to access a resource.
+ */
+export class ForbiddenError extends Error {
+  override readonly name = "ForbiddenError" as const;
+
+  constructor(message: string) {
+    super(message);
+    Object.setPrototypeOf(this, ForbiddenError.prototype);
+  }
+}
