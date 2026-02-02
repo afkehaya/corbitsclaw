@@ -1,0 +1,13 @@
+{
+  "name": "@openclawd/scripts",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "setup-db": "tsx setup-db.ts"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}
