@@ -4,6 +4,10 @@
   "scripts": {
     "test": "tsx --test apps/api/src/**/*.test.ts"
   },
+  "dependencies": {
+    "@hono/node-server": "catalog:",
+    "hono": "catalog:"
+  },
   "devDependencies": {
     "@eslint/js": "catalog:",
     "eslint": "catalog:",

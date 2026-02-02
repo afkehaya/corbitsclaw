@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
-import type { Transaction } from "@openclawd/shared";
+import type { Transaction, CorbitsEndpoint } from "@openclawd/shared";
 
 import { getSupabaseClient } from "../lib/supabase.js";
 import { InvalidRequestError } from "../lib/errors.js";
@@ -72,7 +72,7 @@ adminRoutes.get("/users", async (c: Context) => {
 
   // Fetch balances for each user
   const usersWithBalances = await Promise.all(
-    (users ?? []).map(async (user) => {
+    (users ?? []).map(async (user: { id: string; email: string; created_at: string }) => {
       const balance = await getBalance(user.id);
       return {
         id: user.id,
@@ -182,11 +182,24 @@ adminRoutes.get("/transactions", async (c: Context) => {
     throw new Error(`Failed to fetch transactions: ${error.message}`);
   }
 
-  const transactions: Transaction[] = (data ?? []).map((row) => ({
+  const transactions: Transaction[] = (data ?? []).map((row: {
+    id: string;
+    user_id: string;
+    request_id: string;
+    endpoint: string;
+    path: string;
+    cost_x402: string | number;
+    cost_margin: string | number;
+    cost_total: string | number;
+    margin_percent: string | number;
+    response_status: number | null;
+    response_time_ms: number | null;
+    created_at: string;
+  }) => ({
     id: row.id,
     userId: row.user_id,
     requestId: row.request_id,
-    endpoint: row.endpoint,
+    endpoint: row.endpoint as CorbitsEndpoint,
     path: row.path,
     costX402: Number(row.cost_x402),
     costMargin: Number(row.cost_margin),
@@ -230,7 +243,7 @@ adminRoutes.get("/metrics", async (c: Context) => {
   }
 
   const totalRevenue = (deposits ?? []).reduce(
-    (sum, entry) => sum + Number(entry.amount),
+    (sum: number, entry: { amount: string | number }) => sum + Number(entry.amount),
     0
   );
 
@@ -244,12 +257,12 @@ adminRoutes.get("/metrics", async (c: Context) => {
   }
 
   const totalApiCost = (transactionTotals ?? []).reduce(
-    (sum, t) => sum + Number(t.cost_x402),
+    (sum: number, t: { cost_x402: string | number; cost_margin: string | number }) => sum + Number(t.cost_x402),
     0
   );
 
   const totalMarginEarned = (transactionTotals ?? []).reduce(
-    (sum, t) => sum + Number(t.cost_margin),
+    (sum: number, t: { cost_x402: string | number; cost_margin: string | number }) => sum + Number(t.cost_margin),
     0
   );
 

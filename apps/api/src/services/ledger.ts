@@ -19,7 +19,7 @@ export async function getBalance(userId: string): Promise<number> {
   }
 
   // Sum all amounts (deposits are positive, usage is negative)
-  const balance = (data ?? []).reduce((sum, entry) => {
+  const balance = (data ?? []).reduce((sum: number, entry: { amount: string | number }) => {
     return sum + Number(entry.amount);
   }, 0);
 
@@ -131,7 +131,7 @@ export async function getUsageHistory(
   }
 
   const transactions = (data ?? []).map(mapTransaction);
-  const total = transactions.reduce((sum, t) => sum + t.costTotal, 0);
+  const total = transactions.reduce((sum: number, t: Transaction) => sum + t.costTotal, 0);
 
   return {
     transactions,

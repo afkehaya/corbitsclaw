@@ -24,7 +24,6 @@
     "@hono/node-server": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "hono": "catalog:",
-    "resend": "catalog:",
     "stripe": "catalog:"
   },
   "devDependencies": {

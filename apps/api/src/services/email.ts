@@ -1,5 +1,3 @@
-import { Resend } from "resend";
-
 function getEnvVar(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -8,14 +6,40 @@ function getEnvVar(name: string): string {
   return value;
 }
 
-// Lazy-initialized Resend client
-let resendClient: Resend | null = null;
+/**
+ * Send an email using Resend API directly via fetch.
+ * This avoids the ESM compatibility issues with the resend SDK.
+ */
+async function sendEmail(options: {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}): Promise<void> {
+  const apiKey = getEnvVar("RESEND_API_KEY");
 
-function getResendClient(): Resend {
-  if (!resendClient) {
-    resendClient = new Resend(getEnvVar("RESEND_API_KEY"));
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      from: options.from,
+      to: [options.to],
+      subject: options.subject,
+      html: options.html,
+      text: options.text,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      `Failed to send email: ${response.status} ${JSON.stringify(errorData)}`
+    );
   }
-  return resendClient;
 }
 
 /**
@@ -24,15 +48,15 @@ function getResendClient(): Resend {
  * @param token - The magic link token
  */
 export async function sendMagicLink(email: string, token: string): Promise<void> {
-  const resend = getResendClient();
   const baseUrl = process.env.APP_URL ?? "http://localhost:3000";
   const magicLinkUrl = `${baseUrl}/auth/verify?token=${encodeURIComponent(token)}`;
-  const fromEmail = process.env.EMAIL_FROM ?? "OpenClawd <noreply@openclawd.com>";
+  const fromEmail = process.env.EMAIL_FROM ?? "OpenClawd <noreply@openclaw.ai>";
 
-  const { error } = await resend.emails.send({
+  await sendEmail({
     from: fromEmail,
     to: email,
     subject: "Sign in to OpenClawd",
+    text: `Sign in to OpenClawd\n\nClick the link below to sign in. This link will expire in 15 minutes.\n\n${magicLinkUrl}\n\nIf you didn't request this email, you can safely ignore it.`,
     html: `
 <!DOCTYPE html>
 <html>
@@ -62,10 +86,5 @@ export async function sendMagicLink(email: string, token: string): Promise<void>
 </body>
 </html>
     `.trim(),
-    text: `Sign in to OpenClawd\n\nClick the link below to sign in. This link will expire in 15 minutes.\n\n${magicLinkUrl}\n\nIf you didn't request this email, you can safely ignore it.`,
   });
-
-  if (error) {
-    throw new Error(`Failed to send magic link email: ${error.message}`);
-  }
 }
