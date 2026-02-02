@@ -52,7 +52,7 @@ For API calls (xai, openai, amazon), also read the endpoint-specific documentati
 ## Configuration
 
 Config file: `~/.openclawd/config.json`
-API Base URL: `OPENCLAWD_API_URL` env var or `https://api.openclawd.ai`
+API Base URL: `OPENCLAWD_API_URL` env var or `https://api.openclaw.ai`
 
 ## Model Shortcuts for Chat
 

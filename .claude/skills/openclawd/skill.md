@@ -20,7 +20,7 @@ Local config stored at: `~/.openclawd/config.json`
 }
 ```
 
-API Base URL: `OPENCLAWD_API_URL` environment variable or `https://api.openclawd.ai`
+API Base URL: `OPENCLAWD_API_URL` environment variable or `https://api.openclaw.ai`
 
 ## Commands Overview
 

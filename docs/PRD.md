@@ -161,7 +161,7 @@ As an **admin**, I want to **configure the margin charged on API calls** so that
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                         Backend API (Vercel)                             │
-│                        api.openclawd.ai                                  │
+│                        api.openclaw.ai                                  │
 │                                                                          │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────────┐  │
 │  │    Auth      │  │   Credits    │  │     Payment Gateway          │  │

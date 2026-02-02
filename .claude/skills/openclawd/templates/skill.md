@@ -9,7 +9,7 @@ This template provides Claude Code with instructions to execute OpenClawd comman
 ### Storage Locations
 
 - **Config file**: `~/.openclawd/config.json`
-- **API Base URL**: Use `OPENCLAWD_API_URL` environment variable or default to `https://api.openclawd.ai`
+- **API Base URL**: Use `OPENCLAWD_API_URL` environment variable or default to `https://api.openclaw.ai`
 
 ### Config File Format
 
@@ -33,7 +33,7 @@ If the file does not exist or is empty, the user needs to run `/openclawd setup`
 ### Getting the API Base URL
 
 ```bash
-echo "${OPENCLAWD_API_URL:-https://api.openclawd.ai}"
+echo "${OPENCLAWD_API_URL:-https://api.openclaw.ai}"
 ```
 
 ---
@@ -156,7 +156,7 @@ Validate email format before proceeding.
 #### Step 2: Send Magic Link
 
 ```bash
-API_URL="${OPENCLAWD_API_URL:-https://api.openclawd.ai}"
+API_URL="${OPENCLAWD_API_URL:-https://api.openclaw.ai}"
 curl -s -X POST "${API_URL}/auth/send-link" \
   -H "Content-Type: application/json" \
   -d '{"email": "USER_EMAIL_HERE"}'
@@ -199,7 +199,7 @@ Paste your API key here (starts with oc_):
 
 Verify the API key works by checking balance:
 ```bash
-API_URL="${OPENCLAWD_API_URL:-https://api.openclawd.ai}"
+API_URL="${OPENCLAWD_API_URL:-https://api.openclaw.ai}"
 API_KEY="oc_user_provided_key"
 curl -s -X GET "${API_URL}/credits/balance" \
   -H "Authorization: Bearer ${API_KEY}"
@@ -258,7 +258,7 @@ Not authenticated. Run /openclawd setup or /openclawd login first.
 #### Step 2: Fetch Balance
 
 ```bash
-API_URL="${OPENCLAWD_API_URL:-https://api.openclawd.ai}"
+API_URL="${OPENCLAWD_API_URL:-https://api.openclaw.ai}"
 API_KEY="<from config>"
 curl -s -X GET "${API_URL}/credits/balance" \
   -H "Authorization: Bearer ${API_KEY}"
@@ -328,13 +328,13 @@ If not authenticated, redirect to setup.
 #### Step 3: Create Checkout Session
 
 ```bash
-API_URL="${OPENCLAWD_API_URL:-https://api.openclawd.ai}"
+API_URL="${OPENCLAWD_API_URL:-https://api.openclaw.ai}"
 API_KEY="<from config>"
 AMOUNT=25
 curl -s -X POST "${API_URL}/stripe/checkout" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \
-  -d "{\"amount\": ${AMOUNT}, \"returnUrl\": \"https://openclawd.ai/checkout/success\"}"
+  -d "{\"amount\": ${AMOUNT}, \"returnUrl\": \"https://openclaw.ai/checkout/success\"}"
 ```
 
 Expected response:
@@ -394,7 +394,7 @@ cat ~/.openclawd/config.json 2>/dev/null
 #### Step 3: Fetch Usage
 
 ```bash
-API_URL="${OPENCLAWD_API_URL:-https://api.openclawd.ai}"
+API_URL="${OPENCLAWD_API_URL:-https://api.openclaw.ai}"
 API_KEY="<from config>"
 DAYS=30
 curl -s -X GET "${API_URL}/credits/usage?days=${DAYS}" \
@@ -477,7 +477,7 @@ cat ~/.openclawd/config.json 2>/dev/null
 
 For chat completions (default):
 ```bash
-API_URL="${OPENCLAWD_API_URL:-https://api.openclawd.ai}"
+API_URL="${OPENCLAWD_API_URL:-https://api.openclaw.ai}"
 API_KEY="<from config>"
 curl -s -X POST "${API_URL}/gateway/xai/v1/chat/completions" \
   -H "Authorization: Bearer ${API_KEY}" \
@@ -530,7 +530,7 @@ Call OpenAI API endpoint.
 
 Same pattern as xai command, but using:
 ```bash
-API_URL="${OPENCLAWD_API_URL:-https://api.openclawd.ai}"
+API_URL="${OPENCLAWD_API_URL:-https://api.openclaw.ai}"
 curl -s -X POST "${API_URL}/gateway/openai/v1/chat/completions" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \
@@ -563,7 +563,7 @@ Call Crossmint/Amazon headless checkout API.
 #### Create Order
 
 ```bash
-API_URL="${OPENCLAWD_API_URL:-https://api.openclawd.ai}"
+API_URL="${OPENCLAWD_API_URL:-https://api.openclaw.ai}"
 curl -s -X POST "${API_URL}/gateway/amazon/api/v1/orders" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \

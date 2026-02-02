@@ -486,10 +486,10 @@ SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
 
 # Email (for magic links)
 RESEND_API_KEY=re_...
-FROM_EMAIL=noreply@openclawd.ai
+FROM_EMAIL=noreply@openclaw.ai
 
 # App
-API_BASE_URL=https://api.openclawd.ai
+API_BASE_URL=https://api.openclaw.ai
 ```
 
 ### Skill (Local)
@@ -499,7 +499,7 @@ API_BASE_URL=https://api.openclawd.ai
 {
   "apiKey": "oc_...",
   "email": "user@example.com",
-  "apiBaseUrl": "https://api.openclawd.ai"
+  "apiBaseUrl": "https://api.openclaw.ai"
 }
 ```
 

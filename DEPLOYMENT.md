@@ -13,7 +13,7 @@ Before starting, ensure you have:
 - [ ] Stripe account
 - [ ] Solana wallet with USDC
 - [ ] Resend account (for emails)
-- [ ] Domain for the API (e.g., api.openclawd.ai)
+- [ ] Domain for the API (e.g., api.openclaw.ai)
 
 ## Step 1: Supabase Setup
 
@@ -196,7 +196,7 @@ CREATE POLICY "Service role full access" ON magic_links
 
 1. Go to Developers > Webhooks
 2. Add endpoint:
-   - **URL**: `https://api.openclawd.ai/stripe/webhook`
+   - **URL**: `https://api.openclaw.ai/stripe/webhook`
    - **Events to listen for**:
      - `checkout.session.completed`
      - `payment_intent.succeeded`
@@ -270,7 +270,7 @@ For production, use a premium RPC:
 
 ### 4.2 Verify Domain
 
-1. Add your domain (e.g., `openclawd.ai`)
+1. Add your domain (e.g., `openclaw.ai`)
 2. Add the required DNS records
 3. Wait for verification
 
@@ -357,7 +357,7 @@ Expected response:
 ### 6.1 Add Custom Domain in Vercel
 
 1. Go to Project > Settings > Domains
-2. Add `api.openclawd.ai`
+2. Add `api.openclaw.ai`
 3. Follow DNS configuration instructions
 
 ### 6.2 Update DNS
@@ -375,7 +375,7 @@ Vercel automatically provisions SSL certificates. This may take a few minutes.
 ### 6.4 Update Stripe Webhook
 
 Update the webhook URL in Stripe to use your custom domain:
-`https://api.openclawd.ai/stripe/webhook`
+`https://api.openclaw.ai/stripe/webhook`
 
 ---
 

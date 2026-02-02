@@ -151,7 +151,7 @@ For full control, use the direct API endpoints:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `OPENCLAWD_API_URL` | API base URL | `https://api.openclawd.ai` |
+| `OPENCLAWD_API_URL` | API base URL | `https://api.openclaw.ai` |
 
 Set a custom API URL for development:
 
@@ -200,7 +200,7 @@ Your API key may have been rotated. Re-authenticate:
 
 Check your internet connection and that the API is reachable:
 ```bash
-curl https://api.openclawd.ai/health
+curl https://api.openclaw.ai/health
 ```
 
 ### Magic Link Not Arriving
