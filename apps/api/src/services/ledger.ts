@@ -154,6 +154,57 @@ export async function hasSufficientBalance(
   return balance >= amount;
 }
 
+/**
+ * Input for recording a transaction.
+ */
+export interface RecordTransactionInput {
+  userId: string;
+  requestId: string;
+  endpoint: CorbitsEndpoint;
+  path: string;
+  costX402: number;
+  costMargin: number;
+  costTotal: number;
+  marginPercent: number;
+  responseStatus?: number;
+  responseTimeMs?: number;
+}
+
+/**
+ * Record a transaction with full cost breakdown.
+ * This is used for detailed tracking and analytics.
+ * @param input - Transaction details
+ * @returns The created transaction
+ */
+export async function recordTransaction(
+  input: RecordTransactionInput
+): Promise<Transaction> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .insert({
+      user_id: input.userId,
+      request_id: input.requestId,
+      endpoint: input.endpoint,
+      path: input.path,
+      cost_x402: input.costX402,
+      cost_margin: input.costMargin,
+      cost_total: input.costTotal,
+      margin_percent: input.marginPercent,
+      response_status: input.responseStatus ?? null,
+      response_time_ms: input.responseTimeMs ?? null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to record transaction: ${error.message}`);
+  }
+
+  return mapTransaction(data);
+}
+
 // Helper function to map database row to CreditEntry type
 function mapCreditEntry(row: {
   id: string;
