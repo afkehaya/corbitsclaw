@@ -3,9 +3,10 @@ import { serve } from "@hono/node-server";
 import type { Context } from "hono";
 
 import { AuthError, InsufficientBalanceError, InvalidRequestError } from "./lib/errors.js";
+import { authRoutes } from "./routes/auth.js";
+import { creditsRoutes } from "./routes/credits.js";
 
 // Placeholder route imports - uncomment and update as routes are implemented
-// import { authRoutes } from "./routes/auth.js";
 // import { walletRoutes } from "./routes/wallet.js";
 // import { paymentRoutes } from "./routes/payment.js";
 
@@ -52,9 +53,10 @@ app.get("/health", (c: Context) => {
 });
 
 // Mount route handlers - uncomment as routes are implemented
-// app.route("/auth", authRoutes);
+app.route("/auth", authRoutes);
 // app.route("/wallet", walletRoutes);
 // app.route("/payment", paymentRoutes);
+app.route("/credits", creditsRoutes);
 
 // Export for Vercel edge functions
 export default app;
