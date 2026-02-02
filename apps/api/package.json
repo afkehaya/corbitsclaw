@@ -9,7 +9,8 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "tap src/**/*.test.ts"
   },
   "dependencies": {
     "@openclawd/shared": "workspace:*",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "tap": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:"
   }

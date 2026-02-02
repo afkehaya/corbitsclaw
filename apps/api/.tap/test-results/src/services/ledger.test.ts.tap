@@ -1,0 +1,176 @@
+TAP version 14
+# Subtest: getBalance
+    # Subtest: returns 0 for user with no credits
+        ok 1 - should return 0 for empty credits
+        1..1
+    ok 1 - returns 0 for user with no credits # time=1.528ms
+    
+    # Subtest: returns correct sum of deposits and usage
+        ok 1 - should return sum of all amounts (100 - 25 + 50 = 125)
+        1..1
+    ok 2 - returns correct sum of deposits and usage # time=0.405ms
+    
+    # Subtest: handles negative amounts correctly
+        ok 1 - should correctly handle negative balance (50 - 75 = -25)
+        1..1
+    ok 3 - handles negative amounts correctly # time=0.255ms
+    
+    # Subtest: throws error when Supabase fails
+        ok 1 - should throw error with message
+        1..1
+    ok 4 - throws error when Supabase fails # time=1.18ms
+    
+    1..4
+ok 1 - getBalance # time=17.246ms
+
+# Subtest: recordDeposit
+    # Subtest: creates credit entry with positive amount
+        ok 1 - amount should be positive
+        ok 2 - type should be deposit
+        1..2
+    ok 1 - creates credit entry with positive amount # time=0.303ms
+    
+    # Subtest: stores stripe session ID
+        ok 1 - should store stripe session ID
+        1..1
+    ok 2 - stores stripe session ID # time=0.13ms
+    
+    # Subtest: returns correct CreditEntry structure
+        ok 1 - should have id
+        ok 2 - should have correct userId
+        ok 3 - should have correct amount
+        ok 4 - should have type deposit
+        ok 5 - should have default description
+        ok 6 - should have stripeSessionId
+        ok 7 - should have createdAt as Date
+        1..7
+    ok 3 - returns correct CreditEntry structure # time=0.398ms
+    
+    # Subtest: throws error for non-positive amount
+        ok 1 - should reject zero amount
+        ok 2 - should reject negative amount
+        1..2
+    ok 4 - throws error for non-positive amount # time=0.621ms
+    
+    1..4
+ok 2 - recordDeposit # time=11.945ms
+
+# Subtest: recordUsage
+    # Subtest: creates credit entry with negative amount
+        ok 1 - amount should be stored as negative
+        ok 2 - type should be usage
+        1..2
+    ok 1 - creates credit entry with negative amount # time=0.253ms
+    
+    # Subtest: stores request ID
+        ok 1 - should store request ID
+        1..1
+    ok 2 - stores request ID # time=0.174ms
+    
+    # Subtest: returns correct CreditEntry structure
+        ok 1 - should have id
+        ok 2 - should have correct userId
+        ok 3 - should have negative amount
+        ok 4 - should have type usage
+        ok 5 - should have custom description
+        ok 6 - should have requestId
+        ok 7 - should have createdAt as Date
+        1..7
+    ok 3 - returns correct CreditEntry structure # time=0.285ms
+    
+    # Subtest: uses default description when not provided
+        ok 1 - should use default description
+        1..1
+    ok 4 - uses default description when not provided # time=0.103ms
+    
+    # Subtest: throws error for non-positive amount
+        ok 1 - should reject zero amount
+        ok 2 - should reject negative amount
+        1..2
+    ok 5 - throws error for non-positive amount # time=0.348ms
+    
+    1..5
+ok 3 - recordUsage # time=10.44ms
+
+# Subtest: getUsageHistory
+    # Subtest: returns transactions in date range
+        ok 1 - should return 2 transactions
+        ok 2 - period.start should be a Date
+        ok 3 - period.end should be a Date
+        1..3
+    ok 1 - returns transactions in date range # time=0.466ms
+    
+    # Subtest: calculates total correctly
+        ok 1 - total should be sum of costTotal (0.10 + 0.25 = 0.35)
+        1..1
+    ok 2 - calculates total correctly # time=0.138ms
+    
+    # Subtest: handles empty results
+        ok 1 - should return empty array
+        ok 2 - total should be 0
+        ok 3 - should still have period.start
+        ok 4 - should still have period.end
+        1..4
+    ok 3 - handles empty results # time=0.188ms
+    
+    # Subtest: uses default 30 days when days not specified
+        ok 1 - should default to 30 days period
+        1..1
+    ok 4 - uses default 30 days when days not specified # time=0.105ms
+    
+    1..4
+ok 4 - getUsageHistory # time=13.482ms
+
+# Subtest: hasSufficientBalance
+    # Subtest: returns true when balance >= amount
+        ok 1 - should return true when balance > amount
+        ok 2 - should return true when balance === amount
+        1..2
+    ok 1 - returns true when balance >= amount # time=0.256ms
+    
+    # Subtest: returns false when balance < amount
+        ok 1 - should return false when balance < amount
+        1..1
+    ok 2 - returns false when balance < amount # time=0.109ms
+    
+    # Subtest: returns false when no credits exist
+        ok 1 - should return false when balance is 0
+        1..1
+    ok 3 - returns false when no credits exist # time=0.083ms
+    
+    # Subtest: handles negative balance correctly
+        ok 1 - should return false when balance is negative
+        1..1
+    ok 4 - handles negative balance correctly # time=0.103ms
+    
+    1..4
+ok 5 - hasSufficientBalance # time=7.878ms
+
+# Subtest: recordTransaction
+    # Subtest: records transaction with all fields
+        ok 1 - should have id
+        ok 2 - should have correct userId
+        ok 3 - should have correct requestId
+        ok 4 - should have correct endpoint
+        ok 5 - should have correct path
+        ok 6 - should have correct costX402
+        ok 7 - should have correct costMargin
+        ok 8 - should have correct costTotal
+        ok 9 - should have correct marginPercent
+        ok 10 - should have correct responseStatus
+        ok 11 - should have correct responseTimeMs
+        ok 12 - should have createdAt as Date
+        1..12
+    ok 1 - records transaction with all fields # time=0.621ms
+    
+    # Subtest: handles optional fields
+        ok 1 - should have id
+        ok 2 - responseStatus should be undefined
+        ok 3 - responseTimeMs should be undefined
+        1..3
+    ok 2 - handles optional fields # time=0.177ms
+    
+    1..2
+ok 6 - recordTransaction # time=8.577ms
+
+1..6
