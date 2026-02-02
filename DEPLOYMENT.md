@@ -252,12 +252,16 @@ console.log(privateKey);
 
 3. Ensure there's a small amount of SOL for transaction fees (~0.1 SOL)
 
-### 3.4 Choose RPC Provider
+### 3.4 RPC Configuration (Automatic)
 
-For production, use a premium RPC:
-- Helius: `https://rpc.helius.xyz/?api-key=YOUR_KEY`
-- QuickNode: Your QuickNode endpoint
-- Default: `https://api.mainnet-beta.solana.com` (rate limited)
+OpenClawd uses **Corbits Helius** (`https://helius.api.corbits.dev`) as the primary RPC.
+- Cost: 0.01 USDC per request (paid via x402 from your wallet)
+- No API key required - payment handled automatically
+- More reliable than rate-limited public endpoints
+
+A public Solana RPC is used only for payment transaction submission (bootstrap).
+
+**No RPC_URL configuration needed** - this is handled automatically.
 
 ---
 
@@ -312,7 +316,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 
 # Solana
 SOLANA_PRIVATE_KEY=base58_encoded_private_key_here
-RPC_URL=https://rpc.helius.xyz/?api-key=YOUR_KEY
+# RPC_URL not needed - uses Corbits Helius (x402) automatically
 
 # Email
 RESEND_API_KEY=re_...
@@ -388,7 +392,6 @@ Update the webhook URL in Stripe to use your custom domain:
 | `STRIPE_SECRET_KEY` | Yes | Stripe secret key | `sk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | Yes | Stripe webhook signing secret | `whsec_...` |
 | `SOLANA_PRIVATE_KEY` | Yes | Base58 encoded private key | `5abc...` |
-| `RPC_URL` | No | Solana RPC endpoint | `https://api.mainnet-beta.solana.com` |
 | `RESEND_API_KEY` | Yes | Resend API key for emails | `re_...` |
 | `ADMIN_API_KEY` | Yes | Admin authentication key | Random string |
 | `MARGIN_PERCENT` | No | Default margin on API calls | `30` |
