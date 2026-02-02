@@ -47,12 +47,14 @@
 │  ┌────────────────────────────────────────────────────────────┐  │
 │  │                      Routes (src/routes/)                   │  │
 │  │                                                             │  │
-│  │  auth.ts                credits.ts           proxy.ts       │  │
-│  │  ─────────              ────────────         ─────────      │  │
-│  │  POST /auth/send-link   GET /balance         POST /proxy/*  │  │
-│  │  GET /auth/verify       POST /topup          - xai/*        │  │
-│  │  POST /auth/refresh     GET /usage           - openai/*     │  │
-│  │                         POST /webhook        - amazon/*     │  │
+│  │  auth.ts           credits.ts        gateway.ts   admin.ts  │  │
+│  │  ─────────         ────────────      ──────────   ───────── │  │
+│  │  POST /auth/       GET /balance      POST /api/*  GET /admin│  │
+│  │    send-link       POST /topup       - xai/*      POST /admin│  │
+│  │  GET /auth/        GET /usage        - openai/*     /config │  │
+│  │    verify          POST /webhook     - amazon/*     /users  │  │
+│  │  POST /auth/                                        /metrics│  │
+│  │    refresh                                                  │  │
 │  └────────────────────────────────────────────────────────────┘  │
 │                               │                                   │
 │  ┌────────────────────────────────────────────────────────────┐  │
@@ -117,19 +119,37 @@ CREATE TABLE credits (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Transaction log (API call records)
+-- Transaction log (API call records with cost breakdown)
 CREATE TABLE transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) NOT NULL,
   request_id TEXT UNIQUE NOT NULL,  -- For idempotency
   endpoint TEXT NOT NULL,  -- 'xai' | 'openai' | 'amazon'
   path TEXT NOT NULL,  -- Full request path
-  cost_usd DECIMAL(12,6) NOT NULL,  -- What we charged user
-  cost_actual DECIMAL(12,6) NOT NULL,  -- What Corbits charged us
+  cost_x402 DECIMAL(12,6) NOT NULL,  -- What Corbits charged us (from x402 response)
+  cost_margin DECIMAL(12,6) NOT NULL,  -- Our margin (cost_x402 * margin_percent)
+  cost_total DECIMAL(12,6) NOT NULL,  -- What we charged user (cost_x402 + cost_margin)
+  margin_percent DECIMAL(5,2) NOT NULL,  -- Margin % at time of transaction (for audit)
   response_status INTEGER,
   response_time_ms INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Admin config (key-value store for settings)
+CREATE TABLE config (
+  key TEXT PRIMARY KEY,
+  value JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by TEXT  -- Admin identifier
+);
+
+-- Default config values
+INSERT INTO config (key, value) VALUES
+  ('margin_global', '{"percent": 30}'),
+  ('margin_xai', '{"percent": null}'),      -- null = use global
+  ('margin_openai', '{"percent": null}'),   -- null = use global
+  ('margin_amazon', '{"percent": null}'),   -- null = use global
+  ('admin_password_hash', '{"hash": null}');  -- Set on first admin setup
 
 -- Magic link tokens (short-lived)
 CREATE TABLE magic_links (
@@ -216,11 +236,22 @@ export const CORBITS_URLS: Record<CorbitsEndpoint, string> = {
 };
 
 // Constants
-export const MARGIN_MULTIPLIER = 0.70;  // We keep 30%
+export const DEFAULT_MARGIN_PERCENT = 30;  // Configurable via admin dashboard
 export const STRIPE_FEE_PERCENT = 0.029;
 export const STRIPE_FEE_FIXED = 0.30;
 export const MIN_TOPUP_USD = 10;
 export const LOW_BALANCE_THRESHOLD = 5;
+
+// Admin config types
+export type MarginConfig = {
+  global: number;  // Default margin % (e.g., 30)
+  perEndpoint: Partial<Record<CorbitsEndpoint, number>>;  // Optional overrides
+};
+
+export type AdminConfig = {
+  margin: MarginConfig;
+  walletAlertThreshold: number;  // Alert if USDC balance below this
+};
 ```
 
 ---
@@ -272,22 +303,76 @@ POST /webhook
   Action: Verify signature, record deposit on checkout.session.completed
 ```
 
-### Proxy Routes (`/proxy/*`)
+### Payment Gateway Routes (`/api/*`)
 
 ```
-POST /proxy/xai/*
-POST /proxy/openai/*
-POST /proxy/amazon/*
+POST /api/xai/*
+POST /api/openai/*
+POST /api/amazon/*
   Headers: Authorization: Bearer <api_key>
   Body: <passthrough to Corbits>
   Response: <passthrough from Corbits>
 
   Flow:
   1. Validate API key
-  2. Check user has sufficient balance (estimate or fail)
+  2. Check user has sufficient balance (estimate based on endpoint type)
   3. Make x402 request to Corbits via @faremeter/fetch
-  4. Record actual cost in transactions + credits
-  5. Return response
+  4. Get actual cost from x402 response (cost_x402)
+  5. Get margin % from config (per-endpoint or global)
+  6. Calculate: cost_margin = cost_x402 * (margin_percent / 100)
+  7. Calculate: cost_total = cost_x402 + cost_margin
+  8. Record in transactions table (with full cost breakdown)
+  9. Deduct cost_total from user's credit balance
+  10. Return Corbits response unchanged
+```
+
+### Admin Routes (`/admin/*`)
+
+```
+POST /admin/login
+  Body: { password: string }
+  Response: { token: string }  // Short-lived admin session token
+  Action: Verify password hash, return session token
+
+GET /admin/config
+  Headers: Authorization: Bearer <admin_token>
+  Response: {
+    margin: { global: 30, perEndpoint: { xai: null, openai: null, amazon: null } },
+    walletAlertThreshold: 1000
+  }
+
+POST /admin/config
+  Headers: Authorization: Bearer <admin_token>
+  Body: { margin?: { global?: number, perEndpoint?: {...} }, walletAlertThreshold?: number }
+  Response: { success: true, config: {...} }
+  Action: Update config values
+
+GET /admin/users
+  Headers: Authorization: Bearer <admin_token>
+  Query: ?page=1&limit=50
+  Response: {
+    users: [{ id, email, balance, totalSpent, createdAt }],
+    total: 150
+  }
+
+GET /admin/metrics
+  Headers: Authorization: Bearer <admin_token>
+  Query: ?days=30
+  Response: {
+    totalRevenue: 1234.56,      // cost_total sum
+    totalCost: 863.19,          // cost_x402 sum
+    totalMargin: 371.37,        // cost_margin sum
+    totalTransactions: 5432,
+    walletBalance: 8500.00,     // Current USDC balance
+    activeUsers: 45,
+    topEndpoints: [{ endpoint: 'openai', count: 3200, revenue: 800 }, ...]
+  }
+
+POST /admin/setup
+  Body: { password: string }
+  Response: { success: true }
+  Action: Set initial admin password (only works if no password set)
+  Note: One-time setup endpoint
 ```
 
 ---
@@ -313,14 +398,17 @@ openclawd/
 │       │   ├── routes/
 │       │   │   ├── auth.ts           # Magic link auth
 │       │   │   ├── credits.ts        # Balance, topup, webhook
-│       │   │   └── proxy.ts          # Corbits proxy
+│       │   │   ├── gateway.ts        # Payment gateway (Corbits x402)
+│       │   │   └── admin.ts          # Admin dashboard API
 │       │   ├── services/
 │       │   │   ├── ledger.ts         # Credit operations
 │       │   │   ├── wallet.ts         # Solana/x402
 │       │   │   ├── stripe.ts         # Stripe integration
-│       │   │   └── email.ts          # Magic link emails
+│       │   │   ├── email.ts          # Magic link emails
+│       │   │   └── config.ts         # Admin config management
 │       │   ├── middleware/
-│       │   │   └── auth.ts           # API key validation
+│       │   │   ├── auth.ts           # API key validation
+│       │   │   └── admin-auth.ts     # Admin password validation
 │       │   └── lib/
 │       │       ├── supabase.ts       # DB client
 │       │       └── errors.ts         # Error types

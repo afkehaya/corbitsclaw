@@ -46,8 +46,8 @@ As a **developer**, I want my **Claude agent to call Corbits endpoints transpare
 **Acceptance Criteria:**
 - [ ] Agent can call xAI (Grok), OpenAI, and Crossmint (Amazon) APIs
 - [ ] Skill includes embedded docs so Claude knows correct request formats
-- [ ] Per-request cost shown before execution (optional confirmation)
-- [ ] Credits deducted automatically
+- [ ] API calls execute immediately without confirmation prompts (good UX)
+- [ ] Credits deducted automatically based on x402 cost + configured margin
 - [ ] Clear error if insufficient balance
 - [ ] Response returned to agent seamlessly
 
@@ -56,7 +56,7 @@ As a **developer**, I want my **Claude agent to call Corbits endpoints transpare
 As a **user**, I want my **agent to purchase items from Amazon** so that **I can automate shopping tasks**.
 
 **Acceptance Criteria:**
-- [ ] Agent can look up Amazon products by ASIN or URL
+- [ ] Agent can look up Amazon products by ASIN or URL using the crossmint api
 - [ ] Agent shows price quote before purchasing
 - [ ] User confirms purchase (agent doesn't auto-buy without approval)
 - [ ] Order status trackable via skill
@@ -77,10 +77,22 @@ As a **user**, I want to **check my balance and add more credits anytime** so th
 As a **user**, I want to **understand what I'm being charged** so that **I can budget my API usage**.
 
 **Acceptance Criteria:**
-- [ ] Each API call shows estimated cost before execution
-- [ ] Daily/weekly usage summary available
-- [ ] Breakdown by endpoint type
-- [ ] No hidden fees—pass-through pricing clearly documented
+- [ ] Each API call executes without showing how much it costs beforehand
+- [ ] Daily/weekly usage summary available via `/openclawd usage`
+- [ ] All costs denominated in USD based on credits consumed
+- [ ] Usage breakdown by endpoint type (xAI, OpenAI, Amazon)
+
+### Story 6: Admin Configuration
+
+As an **admin**, I want to **configure the margin charged on API calls** so that **I can control profitability**.
+
+**Acceptance Criteria:**
+- [ ] Password-protected admin dashboard at `/admin`
+- [ ] Configure global margin % (default 30%)
+- [ ] View hosted wallet USDC balance
+- [ ] View all users and their credit balances
+- [ ] View total usage and revenue metrics
+- [ ] Per-endpoint margin override (optional, P2)
 
 ---
 
@@ -90,15 +102,16 @@ As a **user**, I want to **understand what I'm being charged** so that **I can b
 |----------|---------|-------------|
 | P0 | Email + Magic Link Auth | Passwordless authentication via email verification |
 | P0 | Credit Purchase (Stripe) | Buy credits with credit card, opens Stripe Checkout |
-| P0 | Corbits API Proxy | Proxy all Corbits partner endpoints through our backend |
-| P0 | Credit Ledger | Track deposits, usage, and balance per user |
+| P0 | Payment Gateway | Route skill requests through backend, pay Corbits via x402 (hosted wallet), deduct user credits automatically |
+| P0 | Credit Ledger | Track deposits, usage, and balance per user (USD denominated) |
 | P0 | Hosted Wallet | Solana wallet holding USDC, paying Corbits on users' behalf |
-| P0 | Balance Display | Show current balance in dollars |
-| P1 | Usage History | Per-request transaction log |
+| P0 | Configurable Margin | Admin-configurable margin % charged on top of x402 cost (default 30%) |
+| P0 | Admin Dashboard | Password-protected panel: configure margin %, view wallet balance, view all users/balances |
+| P1 | Balance Display | `/openclawd balance` shows current credit balance in dollars |
+| P1 | Usage History | Per-request transaction log showing cost breakdown (x402 cost + margin) |
 | P1 | Low Balance Alerts | Warn when balance drops below threshold |
-| P1 | Cost Estimation | Show estimated cost before API calls |
-| P2 | Usage Analytics Dashboard | Web dashboard for detailed usage stats |
-| P2 | Webhook Notifications | Alert users via webhook when balance low |
+| P2 | Per-Endpoint Margin | Set different margin % for each Corbits endpoint (xAI vs OpenAI vs Amazon) |
+| P2 | Webhook Notifications | Alert admins via webhook when wallet balance low |
 
 ---
 
@@ -151,32 +164,47 @@ As a **user**, I want to **understand what I'm being charged** so that **I can b
 │                        api.openclawd.ai                                  │
 │                                                                          │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────────┐  │
-│  │    Auth      │  │   Credits    │  │      Corbits Proxy           │  │
-│  │   Service    │  │   Service    │  │        Service               │  │
+│  │    Auth      │  │   Credits    │  │     Payment Gateway          │  │
+│  │   Service    │  │   Service    │  │    (NOT a Corbits proxy)     │  │
 │  │              │  │              │  │                              │  │
-│  │ POST /auth/  │  │ GET /balance │  │ POST /proxy/*                │  │
-│  │   send-link  │  │ POST /topup  │  │                              │  │
-│  │ GET /auth/   │  │ GET /usage   │  │ 1. Validate API key          │  │
-│  │   verify     │  │              │  │ 2. Check sufficient balance  │  │
-│  │              │  │ Stripe       │  │ 3. Call Corbits via x402     │  │
-│  │ Issues JWT   │  │ Webhook      │  │ 4. Deduct credits            │  │
-│  │ + API key    │  │ Handler      │  │ 5. Return response           │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────────────┬───────────────┘  │
+│  │ POST /auth/  │  │ GET /balance │  │ POST /api/xai/*              │  │
+│  │   send-link  │  │ POST /topup  │  │ POST /api/openai/*           │  │
+│  │ GET /auth/   │  │ GET /usage   │  │ POST /api/amazon/*           │  │
+│  │   verify     │  │              │  │                              │  │
+│  │              │  │ Stripe       │  │ 1. Validate API key          │  │
+│  │ Issues JWT   │  │ Webhook      │  │ 2. Check sufficient balance  │  │
+│  │ + API key    │  │ Handler      │  │ 3. Call Corbits via x402     │  │
+│  │              │  │              │  │ 4. Get actual cost from x402 │  │
+│  └──────┬───────┘  └──────┬───────┘  │ 5. Add margin (from config)  │  │
+│         │                 │          │ 6. Deduct total from credits │  │
+│         │                 │          │ 7. Return Corbits response   │  │
+│         │                 │          └──────────────┬───────────────┘  │
 │         │                 │                         │                   │
-│         └─────────────────┼─────────────────────────┘                   │
+│  ┌──────┴─────────────────┴─────────────────────────┴───────────────┐  │
+│  │                      Admin Dashboard                              │  │
+│  │                      /admin (password protected)                  │  │
+│  │                                                                   │  │
+│  │  - Configure global margin % (default 30%)                       │  │
+│  │  - Per-endpoint margin override (xai: 25%, openai: 30%, etc.)   │  │
+│  │  - View hosted wallet USDC balance                               │  │
+│  │  - View all users and their credit balances                      │  │
+│  │  - View usage metrics and revenue                                │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+│                           │                                              │
 │                           ▼                                              │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
 │  │                         Supabase                                   │  │
 │  │                                                                    │  │
-│  │  users                     credits                transactions     │  │
-│  │  ───────────────           ──────────────         ──────────────  │  │
-│  │  id (uuid)                 id (uuid)              id (uuid)        │  │
-│  │  email (unique)            user_id (FK)           user_id (FK)     │  │
-│  │  api_key (unique)          amount (decimal)       endpoint         │  │
-│  │  created_at                type (deposit|usage)   cost (decimal)   │  │
-│  │                            stripe_session_id      request_id       │  │
-│  │                            created_at             response_status  │  │
-│  │                                                   created_at       │  │
+│  │  users              credits             transactions    config     │  │
+│  │  ─────────────      ─────────────       ─────────────   ────────  │  │
+│  │  id (uuid)          id (uuid)           id (uuid)       key       │  │
+│  │  email (unique)     user_id (FK)        user_id (FK)    value     │  │
+│  │  api_key (unique)   amount (decimal)    endpoint        updated_at│  │
+│  │  created_at         type                cost_x402                  │  │
+│  │                     stripe_session_id   cost_margin               │  │
+│  │                     created_at          cost_total                │  │
+│  │                                         response_status           │  │
+│  │                                         created_at                │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 │                                                                          │
 │  ┌───────────────────────────────────────────────────────────────────┐  │
