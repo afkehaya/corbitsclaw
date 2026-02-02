@@ -3,8 +3,12 @@
  *
  * This service provides:
  * - Wallet initialization from a base58 encoded private key
- * - USDC balance checking
+ * - USDC balance checking via Corbits Helius (paid with x402)
  * - Authenticated x402 requests with automatic payment handling
+ *
+ * Architecture:
+ * - Primary RPC: Corbits Helius (https://helius.api.corbits.dev) - paid via x402
+ * - Bootstrap RPC: Public Solana mainnet - used only for payment tx submission
  */
 
 import { createLocalWallet } from "@faremeter/wallet-solana";
@@ -19,14 +23,17 @@ const USDC_MINT = {
   devnet: new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
 } as const;
 
-// Default to mainnet-beta
-const DEFAULT_RPC_URL = "https://api.mainnet-beta.solana.com";
+// RPC endpoints
+const CORBITS_HELIUS_URL = "https://helius.api.corbits.dev";
+const PUBLIC_RPC_URL = "https://api.mainnet-beta.solana.com";
 const DEFAULT_NETWORK = "mainnet-beta" as const;
 
 // Module-level state for singleton wallet
 let walletInstance: Awaited<ReturnType<typeof createLocalWallet>> | null = null;
-let connectionInstance: Connection | null = null;
+let bootstrapConnection: Connection | null = null; // Public RPC for payment tx submission
+let heliusConnection: Connection | null = null; // Corbits Helius for balance/queries
 let keypairInstance: Keypair | null = null;
+let x402Fetch: typeof fetch | null = null; // x402-aware fetch for Helius RPC
 
 /**
  * Result type for x402 requests, includes the response and the cost paid
@@ -40,6 +47,10 @@ export interface X402RequestResult<T = unknown> {
 /**
  * Initialize the Solana wallet from the SOLANA_PRIVATE_KEY environment variable.
  * The key should be base58 encoded.
+ *
+ * Sets up two RPC connections:
+ * 1. Bootstrap connection (public RPC) - for payment transaction submission
+ * 2. Helius connection (Corbits) - for balance checks and queries (paid via x402)
  *
  * This function is idempotent - subsequent calls will return the same wallet instance.
  *
@@ -58,8 +69,6 @@ export async function initWallet(): Promise<
       "SOLANA_PRIVATE_KEY environment variable is not set. Please provide a base58 encoded Solana private key."
     );
   }
-
-  const rpcUrl = process.env["RPC_URL"] ?? DEFAULT_RPC_URL;
 
   // Decode base58 private key to Uint8Array
   let secretKey: Uint8Array;
@@ -80,21 +89,47 @@ export async function initWallet(): Promise<
     );
   }
 
-  // Create Connection to Solana RPC
-  connectionInstance = new Connection(rpcUrl, "confirmed");
-
   // Create wallet using @faremeter/wallet-solana
   walletInstance = await createLocalWallet(DEFAULT_NETWORK, keypairInstance);
+
+  // Create bootstrap connection (public RPC) for payment transaction submission
+  // This avoids circular dependency: we need RPC to pay for x402, but x402 RPC needs payment
+  bootstrapConnection = new Connection(PUBLIC_RPC_URL, "confirmed");
+
+  // Create payment handler for x402 requests using bootstrap connection
+  const mint = USDC_MINT[DEFAULT_NETWORK];
+  const paymentHandler = paymentExact.createPaymentHandler(
+    walletInstance,
+    mint,
+    bootstrapConnection
+  );
+
+  // Create x402-aware fetch for Corbits Helius RPC calls
+  x402Fetch = wrap(fetch, {
+    handlers: [paymentHandler],
+    retryCount: 3,
+    initialRetryDelay: 1000,
+  });
+
+  // Create Helius connection with x402-aware fetch for balance checks and queries
+  // The Corbits Helius endpoint charges 0.01 USDC per request via x402
+  heliusConnection = new Connection(CORBITS_HELIUS_URL, {
+    commitment: "confirmed",
+    fetch: x402Fetch,
+  });
 
   console.log(
     `Wallet initialized: ${walletInstance.publicKey.toBase58()} on ${DEFAULT_NETWORK}`
   );
+  console.log(`  Bootstrap RPC: ${PUBLIC_RPC_URL}`);
+  console.log(`  Helius RPC: ${CORBITS_HELIUS_URL} (x402 enabled)`);
 
   return walletInstance;
 }
 
 /**
  * Get the USDC balance of the initialized wallet.
+ * Uses Corbits Helius RPC (paid via x402) for reliable balance checks.
  *
  * @returns The USDC balance as a string in human-readable format (e.g., "10.50")
  * @throws Error if wallet is not initialized or balance fetch fails
@@ -104,7 +139,7 @@ export async function getWalletBalance(): Promise<{
   decimals: number;
   rawAmount: bigint;
 }> {
-  if (!walletInstance || !connectionInstance || !keypairInstance) {
+  if (!walletInstance || !heliusConnection || !keypairInstance) {
     throw new Error("Wallet not initialized. Call initWallet() first.");
   }
 
@@ -118,8 +153,9 @@ export async function getWalletBalance(): Promise<{
   );
 
   try {
+    // Uses Corbits Helius RPC (x402) for balance check
     const balance =
-      await connectionInstance.getTokenAccountBalance(tokenAccount);
+      await heliusConnection.getTokenAccountBalance(tokenAccount);
 
     const rawAmount = BigInt(balance.value.amount);
     const decimals = balance.value.decimals;
@@ -155,6 +191,9 @@ export async function getWalletBalance(): Promise<{
  * 2. If 402 Payment Required is received, executes payment via wallet
  * 3. Retries the request with payment proof
  *
+ * Payment transactions are submitted via the bootstrap RPC (public Solana mainnet)
+ * to avoid circular dependency with x402-paid RPCs.
+ *
  * @param endpoint - The base URL of the API (e.g., "https://api.corbits.ai")
  * @param path - The path to request (e.g., "/v1/chat/completions")
  * @param body - The request body (will be JSON stringified)
@@ -167,25 +206,9 @@ export async function makeX402Request<T = unknown>(
   body?: unknown,
   method: "GET" | "POST" | "PUT" | "DELETE" = "POST"
 ): Promise<X402RequestResult<T>> {
-  if (!walletInstance || !connectionInstance) {
+  if (!walletInstance || !bootstrapConnection || !x402Fetch) {
     throw new Error("Wallet not initialized. Call initWallet() first.");
   }
-
-  const mint = USDC_MINT[DEFAULT_NETWORK];
-
-  // Create payment handler for Solana USDC payments
-  const paymentHandler = paymentExact.createPaymentHandler(
-    walletInstance,
-    mint,
-    connectionInstance
-  );
-
-  // Create the x402-aware fetch wrapper
-  const x402Fetch = wrap(fetch, {
-    handlers: [paymentHandler],
-    retryCount: 3,
-    initialRetryDelay: 1000,
-  });
 
   const url = new URL(path, endpoint).toString();
 
@@ -203,7 +226,8 @@ export async function makeX402Request<T = unknown>(
     requestInit.body = JSON.stringify(body);
   }
 
-  const response = await x402Fetch(url, requestInit);
+  // Use pre-initialized x402Fetch (uses bootstrap RPC for payment tx submission)
+  const response = await x402Fetch!(url, requestInit);
 
   // Extract payment information from response headers if available
   const paymentHeader = response.headers.get("X-Payment-Response");
