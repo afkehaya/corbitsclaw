@@ -237,8 +237,10 @@ function extractVisiblePrefix(apiKey: string): string {
  * @param apiKey - The API key to validate
  * @returns The user if valid, null otherwise
  */
-export async function validateApiKey(apiKey: string): Promise<User | null> {
-  if (!apiKey.startsWith(API_KEY_PREFIX)) {
+export async function validateApiKey(
+  apiKey: string | null | undefined
+): Promise<User | null> {
+  if (!apiKey?.startsWith(API_KEY_PREFIX)) {
     return null;
   }
 

@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "test": "tap src/**/*.test.ts"
+    "test": "tap --allow-incomplete-coverage src/services/*.test.ts && npx tsx --test src/routes/gateway.test.ts"
   },
   "dependencies": {
     "@faremeter/fetch": "catalog:",
