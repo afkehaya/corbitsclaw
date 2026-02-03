@@ -1,5 +1,9 @@
-import { getSupabaseClient } from "../lib/supabase.js";
-import type { CreditEntry, Transaction, CorbitsEndpoint } from "@openclawd/shared";
+import { getSupabaseClient } from '../lib/supabase.js';
+import type {
+  CreditEntry,
+  Transaction,
+  CorbitsEndpoint,
+} from '@openclawd/shared';
 
 /**
  * Get the current balance for a user by summing all credit entries.
@@ -10,18 +14,22 @@ export async function getBalance(userId: string): Promise<number> {
   const supabase = getSupabaseClient();
 
   const { data, error } = await supabase
-    .from("credits")
-    .select("amount")
-    .eq("user_id", userId);
+    .from('credits')
+    .select('amount')
+    .eq('user_id', userId);
 
   if (error) {
     throw new Error(`Failed to fetch balance: ${error.message}`);
   }
 
   // Sum all amounts (deposits are positive, usage is negative)
-  const balance = (data ?? []).reduce((sum: number, entry: { amount: string | number }) => {
-    return sum + Number(entry.amount);
-  }, 0);
+  interface AmountRow {
+    amount: string | number;
+  }
+  const balance = (data as AmountRow[]).reduce(
+    (sum: number, entry) => sum + Number(entry.amount),
+    0
+  );
 
   return balance;
 }
@@ -39,22 +47,33 @@ export async function recordDeposit(
   stripeSessionId: string
 ): Promise<CreditEntry> {
   if (amount <= 0) {
-    throw new Error("Deposit amount must be positive");
+    throw new Error('Deposit amount must be positive');
   }
 
   const supabase = getSupabaseClient();
 
+  interface CreditRow {
+    id: string;
+    user_id: string;
+    amount: string | number;
+    type: string;
+    description: string | null;
+    stripe_session_id: string | null;
+    request_id: string | null;
+    created_at: string;
+  }
+
   const { data, error } = await supabase
-    .from("credits")
+    .from('credits')
     .insert({
       user_id: userId,
       amount: amount,
-      type: "deposit",
-      description: "Credit deposit via Stripe",
+      type: 'deposit',
+      description: 'Credit deposit via Stripe',
       stripe_session_id: stripeSessionId,
     })
     .select()
-    .single();
+    .single<CreditRow>();
 
   if (error) {
     throw new Error(`Failed to record deposit: ${error.message}`);
@@ -78,22 +97,33 @@ export async function recordUsage(
   description?: string
 ): Promise<CreditEntry> {
   if (amount <= 0) {
-    throw new Error("Usage amount must be positive");
+    throw new Error('Usage amount must be positive');
   }
 
   const supabase = getSupabaseClient();
 
+  interface CreditRowUsage {
+    id: string;
+    user_id: string;
+    amount: string | number;
+    type: string;
+    description: string | null;
+    stripe_session_id: string | null;
+    request_id: string | null;
+    created_at: string;
+  }
+
   const { data, error } = await supabase
-    .from("credits")
+    .from('credits')
     .insert({
       user_id: userId,
       amount: -amount, // Store as negative for usage
-      type: "usage",
-      description: description ?? "API usage",
+      type: 'usage',
+      description: description ?? 'API usage',
       request_id: requestId,
     })
     .select()
-    .single();
+    .single<CreditRowUsage>();
 
   if (error) {
     throw new Error(`Failed to record usage: ${error.message}`);
@@ -110,8 +140,12 @@ export async function recordUsage(
  */
 export async function getUsageHistory(
   userId: string,
-  days: number = 30
-): Promise<{ transactions: Transaction[]; total: number; period: { start: Date; end: Date } }> {
+  days = 30
+): Promise<{
+  transactions: Transaction[];
+  total: number;
+  period: { start: Date; end: Date };
+}> {
   const supabase = getSupabaseClient();
 
   const endDate = new Date();
@@ -119,19 +153,36 @@ export async function getUsageHistory(
   startDate.setDate(startDate.getDate() - days);
 
   const { data, error } = await supabase
-    .from("transactions")
-    .select("*")
-    .eq("user_id", userId)
-    .gte("created_at", startDate.toISOString())
-    .lte("created_at", endDate.toISOString())
-    .order("created_at", { ascending: false });
+    .from('transactions')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('created_at', startDate.toISOString())
+    .lte('created_at', endDate.toISOString())
+    .order('created_at', { ascending: false });
 
   if (error) {
     throw new Error(`Failed to fetch usage history: ${error.message}`);
   }
 
-  const transactions = (data ?? []).map(mapTransaction);
-  const total = transactions.reduce((sum: number, t: Transaction) => sum + t.costTotal, 0);
+  interface TransactionRowHistory {
+    id: string;
+    user_id: string;
+    request_id: string;
+    endpoint: string;
+    path: string;
+    cost_x402: string | number;
+    cost_margin: string | number;
+    cost_total: string | number;
+    margin_percent: string | number;
+    response_status: number | null;
+    response_time_ms: number | null;
+    created_at: string;
+  }
+  const transactions = (data as TransactionRowHistory[]).map(mapTransaction);
+  const total = transactions.reduce(
+    (sum: number, t: Transaction) => sum + t.costTotal,
+    0
+  );
 
   return {
     transactions,
@@ -152,6 +203,125 @@ export async function hasSufficientBalance(
 ): Promise<boolean> {
   const balance = await getBalance(userId);
   return balance >= amount;
+}
+
+/**
+ * Result of a balance reservation operation.
+ */
+export interface ReservationResult {
+  success: boolean;
+  reservationId: string | null;
+  error?: string;
+}
+
+/**
+ * Atomically check balance and reserve funds for a request.
+ * This uses a database stored procedure with row-level locking to prevent race conditions.
+ *
+ * @param userId - The user's UUID
+ * @param amount - The amount to reserve in USD (must be positive)
+ * @param requestId - The associated request ID
+ * @param description - Optional description of the reservation
+ * @returns ReservationResult with success status and reservation ID
+ */
+export async function reserveBalance(
+  userId: string,
+  amount: number,
+  requestId: string,
+  description?: string
+): Promise<ReservationResult> {
+  if (amount <= 0) {
+    return {
+      success: false,
+      reservationId: null,
+      error: 'Reservation amount must be positive',
+    };
+  }
+
+  const supabase = getSupabaseClient();
+
+  const { data, error } = (await supabase.rpc('reserve_balance', {
+    p_user_id: userId,
+    p_amount: amount,
+    p_request_id: requestId,
+    p_description: description ?? 'Reserved for API request',
+  })) as { data: string | null; error: { message: string } | null };
+
+  if (error) {
+    return {
+      success: false,
+      reservationId: null,
+      error: `Failed to reserve balance: ${error.message}`,
+    };
+  }
+
+  // The RPC returns the reservation ID (UUID) on success, null on insufficient balance
+  if (!data) {
+    return {
+      success: false,
+      reservationId: null,
+      error: 'Insufficient balance',
+    };
+  }
+
+  return {
+    success: true,
+    reservationId: data,
+  };
+}
+
+/**
+ * Cancel a reservation and refund the reserved amount.
+ * Used when an API request fails and we need to restore the user's balance.
+ *
+ * @param reservationId - The reservation ID to cancel
+ * @returns True if successfully cancelled
+ */
+export async function cancelReservation(
+  reservationId: string
+): Promise<boolean> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = (await supabase.rpc('cancel_reservation', {
+    p_reservation_id: reservationId,
+  })) as { data: boolean; error: { message: string } | null };
+
+  if (error) {
+    console.error(`Failed to cancel reservation ${reservationId}:`, error);
+    return false;
+  }
+
+  return data;
+}
+
+/**
+ * Adjust a reservation to the actual amount charged.
+ * Used when the actual x402 cost differs from the reserved amount.
+ *
+ * @param reservationId - The reservation ID to adjust
+ * @param actualAmount - The actual amount charged (positive)
+ * @param description - Optional description for the adjustment
+ * @returns True if successfully adjusted
+ */
+export async function adjustReservation(
+  reservationId: string,
+  actualAmount: number,
+  description?: string
+): Promise<boolean> {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = (await supabase.rpc('adjust_reservation', {
+    p_reservation_id: reservationId,
+    p_actual_amount: actualAmount,
+    p_description: description ?? null,
+  })) as { data: boolean; error: { message: string } | null };
+
+  if (error) {
+    console.error(`Failed to adjust reservation ${reservationId}:`, error);
+    return false;
+  }
+
+  return data;
 }
 
 /**
@@ -181,8 +351,23 @@ export async function recordTransaction(
 ): Promise<Transaction> {
   const supabase = getSupabaseClient();
 
+  interface TransactionRowRecord {
+    id: string;
+    user_id: string;
+    request_id: string;
+    endpoint: string;
+    path: string;
+    cost_x402: string | number;
+    cost_margin: string | number;
+    cost_total: string | number;
+    margin_percent: string | number;
+    response_status: number | null;
+    response_time_ms: number | null;
+    created_at: string;
+  }
+
   const { data, error } = await supabase
-    .from("transactions")
+    .from('transactions')
     .insert({
       user_id: input.userId,
       request_id: input.requestId,
@@ -196,7 +381,7 @@ export async function recordTransaction(
       response_time_ms: input.responseTimeMs ?? null,
     })
     .select()
-    .single();
+    .single<TransactionRowRecord>();
 
   if (error) {
     throw new Error(`Failed to record transaction: ${error.message}`);
@@ -220,7 +405,7 @@ function mapCreditEntry(row: {
     id: row.id,
     userId: row.user_id,
     amount: Number(row.amount),
-    type: row.type as "deposit" | "usage" | "refund",
+    type: row.type as 'deposit' | 'usage' | 'refund',
     description: row.description ?? undefined,
     stripeSessionId: row.stripe_session_id ?? undefined,
     requestId: row.request_id ?? undefined,

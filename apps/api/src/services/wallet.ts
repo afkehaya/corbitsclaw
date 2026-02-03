@@ -11,22 +11,22 @@
  * - Bootstrap RPC: Public Solana mainnet - used only for payment tx submission
  */
 
-import { createLocalWallet } from "@faremeter/wallet-solana";
-import { wrap } from "@faremeter/fetch";
-import { exact as paymentExact } from "@faremeter/payment-solana";
-import { Keypair, Connection, PublicKey } from "@solana/web3.js";
-import bs58 from "bs58";
+import { createLocalWallet } from '@faremeter/wallet-solana';
+import { wrap } from '@faremeter/fetch';
+import { exact as paymentExact } from '@faremeter/payment-solana';
+import { Keypair, Connection, PublicKey } from '@solana/web3.js';
+import bs58 from 'bs58';
 
 // USDC mint addresses for Solana clusters
 const USDC_MINT = {
-  "mainnet-beta": new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"),
-  devnet: new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
+  'mainnet-beta': new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
+  devnet: new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'),
 } as const;
 
 // RPC endpoints
-const CORBITS_HELIUS_URL = "https://helius.api.corbits.dev";
-const PUBLIC_RPC_URL = "https://api.mainnet-beta.solana.com";
-const DEFAULT_NETWORK = "mainnet-beta" as const;
+const CORBITS_HELIUS_URL = 'https://helius.api.corbits.dev';
+const PUBLIC_RPC_URL = 'https://api.mainnet-beta.solana.com';
+const DEFAULT_NETWORK = 'mainnet-beta' as const;
 
 // Module-level state for singleton wallet
 let walletInstance: Awaited<ReturnType<typeof createLocalWallet>> | null = null;
@@ -41,7 +41,34 @@ let x402Fetch: typeof fetch | null = null; // x402-aware fetch for Helius RPC
 export interface X402RequestResult<T = unknown> {
   data: T;
   response: Response;
-  costPaid: string | null; // Amount paid in USDC atomic units (null if no payment was made)
+  costPaid: string; // Amount paid in USDC atomic units (always present for successful x402 responses)
+}
+
+/**
+ * Options for x402 requests
+ */
+export interface X402RequestOptions {
+  /**
+   * If true, allow responses that have no cost information.
+   * By default, missing cost headers will throw an error to prevent free usage.
+   * Only set this to true for endpoints that are genuinely free.
+   */
+  allowZeroCost?: boolean;
+}
+
+/**
+ * Error thrown when x402 cost information cannot be determined from the response.
+ * This indicates either a malformed response or an attempt to bypass payment.
+ */
+export class X402CostMissingError extends Error {
+  constructor(url: string) {
+    super(
+      `x402 cost information missing from response for ${url}. ` +
+        `Expected X-Payment-Response or X-Payment-Amount header. ` +
+        `This may indicate a malformed response or payment bypass attempt.`
+    );
+    this.name = 'X402CostMissingError';
+  }
 }
 
 /**
@@ -63,10 +90,10 @@ export async function initWallet(): Promise<
     return walletInstance;
   }
 
-  const privateKeyBase58 = process.env["SOLANA_PRIVATE_KEY"];
+  const privateKeyBase58 = process.env.SOLANA_PRIVATE_KEY;
   if (!privateKeyBase58) {
     throw new Error(
-      "SOLANA_PRIVATE_KEY environment variable is not set. Please provide a base58 encoded Solana private key."
+      'SOLANA_PRIVATE_KEY environment variable is not set. Please provide a base58 encoded Solana private key.'
     );
   }
 
@@ -94,7 +121,7 @@ export async function initWallet(): Promise<
 
   // Create bootstrap connection (public RPC) for payment transaction submission
   // This avoids circular dependency: we need RPC to pay for x402, but x402 RPC needs payment
-  bootstrapConnection = new Connection(PUBLIC_RPC_URL, "confirmed");
+  bootstrapConnection = new Connection(PUBLIC_RPC_URL, 'confirmed');
 
   // Create payment handler for x402 requests using bootstrap connection
   const mint = USDC_MINT[DEFAULT_NETWORK];
@@ -104,17 +131,17 @@ export async function initWallet(): Promise<
     bootstrapConnection
   );
 
-  // Create x402-aware fetch for Corbits Helius RPC calls
+  // Create x402-aware fetch for API calls
   x402Fetch = wrap(fetch, {
     handlers: [paymentHandler],
-    retryCount: 3,
-    initialRetryDelay: 1000,
+    retryCount: 1,
+    initialRetryDelay: 100,
   });
 
   // Create Helius connection with x402-aware fetch for balance checks and queries
   // The Corbits Helius endpoint charges 0.01 USDC per request via x402
   heliusConnection = new Connection(CORBITS_HELIUS_URL, {
-    commitment: "confirmed",
+    commitment: 'confirmed',
     fetch: x402Fetch,
   });
 
@@ -140,13 +167,13 @@ export async function getWalletBalance(): Promise<{
   rawAmount: bigint;
 }> {
   if (!walletInstance || !heliusConnection || !keypairInstance) {
-    throw new Error("Wallet not initialized. Call initWallet() first.");
+    throw new Error('Wallet not initialized. Call initWallet() first.');
   }
 
   const mint = USDC_MINT[DEFAULT_NETWORK];
 
   // Get the associated token account for USDC
-  const { getAssociatedTokenAddressSync } = await import("@solana/spl-token");
+  const { getAssociatedTokenAddressSync } = await import('@solana/spl-token');
   const tokenAccount = getAssociatedTokenAddressSync(
     mint,
     walletInstance.publicKey
@@ -154,12 +181,11 @@ export async function getWalletBalance(): Promise<{
 
   try {
     // Uses Corbits Helius RPC (x402) for balance check
-    const balance =
-      await heliusConnection.getTokenAccountBalance(tokenAccount);
+    const balance = await heliusConnection.getTokenAccountBalance(tokenAccount);
 
     const rawAmount = BigInt(balance.value.amount);
     const decimals = balance.value.decimals;
-    const amount = balance.value.uiAmountString ?? "0";
+    const amount = balance.value.uiAmountString ?? '0';
 
     return {
       amount,
@@ -170,10 +196,10 @@ export async function getWalletBalance(): Promise<{
     // Check if the token account doesn't exist (balance is 0)
     if (
       error instanceof Error &&
-      error.message.includes("could not find account")
+      error.message.includes('could not find account')
     ) {
       return {
-        amount: "0",
+        amount: '0',
         decimals: 6,
         rawAmount: BigInt(0),
       };
@@ -194,20 +220,28 @@ export async function getWalletBalance(): Promise<{
  * Payment transactions are submitted via the bootstrap RPC (public Solana mainnet)
  * to avoid circular dependency with x402-paid RPCs.
  *
+ * IMPORTANT: By default, this function will throw an error if cost information
+ * cannot be determined from the response headers. This prevents free usage when
+ * x402 headers are missing or malformed. Use the `allowZeroCost` option only for
+ * endpoints that are genuinely expected to be free.
+ *
  * @param endpoint - The base URL of the API (e.g., "https://api.corbits.ai")
  * @param path - The path to request (e.g., "/v1/chat/completions")
  * @param body - The request body (will be JSON stringified)
  * @param method - HTTP method (defaults to POST)
+ * @param options - Request options (e.g., allowZeroCost)
  * @returns The response data and the cost paid to the endpoint
+ * @throws X402CostMissingError if cost headers are missing and allowZeroCost is false
  */
 export async function makeX402Request<T = unknown>(
   endpoint: string,
   path: string,
   body?: unknown,
-  method: "GET" | "POST" | "PUT" | "DELETE" = "POST"
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'POST',
+  options: X402RequestOptions = {}
 ): Promise<X402RequestResult<T>> {
   if (!walletInstance || !bootstrapConnection || !x402Fetch) {
-    throw new Error("Wallet not initialized. Call initWallet() first.");
+    throw new Error('Wallet not initialized. Call initWallet() first.');
   }
 
   const url = new URL(path, endpoint).toString();
@@ -218,19 +252,19 @@ export async function makeX402Request<T = unknown>(
   const requestInit: RequestInit = {
     method,
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
   };
 
-  if (body !== undefined && method !== "GET") {
+  if (body !== undefined && method !== 'GET') {
     requestInit.body = JSON.stringify(body);
   }
 
   // Use pre-initialized x402Fetch (uses bootstrap RPC for payment tx submission)
-  const response = await x402Fetch!(url, requestInit);
+  const response = await x402Fetch(url, requestInit);
 
   // Extract payment information from response headers if available
-  const paymentHeader = response.headers.get("X-Payment-Response");
+  const paymentHeader = response.headers.get('X-Payment-Response');
   if (paymentHeader) {
     try {
       const paymentInfo = JSON.parse(paymentHeader) as {
@@ -246,7 +280,7 @@ export async function makeX402Request<T = unknown>(
   }
 
   // Also check for the standard x402 payment amount header
-  const paidAmount = response.headers.get("X-Payment-Amount");
+  const paidAmount = response.headers.get('X-Payment-Amount');
   if (paidAmount) {
     costPaid = paidAmount;
   }
@@ -256,6 +290,16 @@ export async function makeX402Request<T = unknown>(
     throw new Error(
       `x402 request failed with status ${response.status}: ${errorText}`
     );
+  }
+
+  // Validate that cost information is present unless explicitly allowed
+  const { allowZeroCost = false } = options;
+  if (costPaid === null) {
+    if (!allowZeroCost) {
+      throw new X402CostMissingError(url);
+    }
+    // If zero cost is explicitly allowed, set costPaid to "0"
+    costPaid = '0';
   }
 
   const data = (await response.json()) as T;
@@ -275,7 +319,7 @@ export async function makeX402Request<T = unknown>(
  */
 export function getWalletPublicKey(): string {
   if (!walletInstance) {
-    throw new Error("Wallet not initialized. Call initWallet() first.");
+    throw new Error('Wallet not initialized. Call initWallet() first.');
   }
   return walletInstance.publicKey.toBase58();
 }
