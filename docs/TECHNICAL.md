@@ -6,18 +6,18 @@
 
 ## Tech Stack
 
-| Layer | Technology | Rationale |
-|-------|------------|-----------|
-| **Skill Runtime** | Claude Code Skill (Markdown + TypeScript) | Native integration, embedded docs |
-| **Backend Framework** | Hono on Vercel Edge | Fast, TypeScript-native, @faremeter compatible |
-| **Database** | Supabase (PostgreSQL) | Managed, real-time, good free tier |
-| **Auth** | Magic Link (custom) | Passwordless, simple UX |
-| **Payments** | Stripe Checkout | PCI compliant, webhooks |
-| **Blockchain** | Solana (USDC) | Low fees, @faremeter/wallet-solana |
-| **x402 Protocol** | @faremeter/* packages | Required per conventions |
-| **Package Manager** | pnpm 10.12.1+ | Catalog versioning per faremeter |
-| **Build** | TypeScript + Makefile | Strict mode, faremeter conventions |
-| **Testing** | tap (node-tap) | Faremeter standard |
+| Layer                 | Technology                                | Rationale                                      |
+| --------------------- | ----------------------------------------- | ---------------------------------------------- |
+| **Skill Runtime**     | Claude Code Skill (Markdown + TypeScript) | Native integration, embedded docs              |
+| **Backend Framework** | Hono on Vercel Edge                       | Fast, TypeScript-native, @faremeter compatible |
+| **Database**          | Supabase (PostgreSQL)                     | Managed, real-time, good free tier             |
+| **Auth**              | Magic Link (custom)                       | Passwordless, simple UX                        |
+| **Payments**          | Stripe Checkout                           | PCI compliant, webhooks                        |
+| **Blockchain**        | Solana (USDC)                             | Low fees, @faremeter/wallet-solana             |
+| **x402 Protocol**     | @faremeter/\* packages                    | Required per conventions                       |
+| **Package Manager**   | pnpm 10.12.1+                             | Catalog versioning per faremeter               |
+| **Build**             | TypeScript + Makefile                     | Strict mode, faremeter conventions             |
+| **Testing**           | tap (node-tap)                            | Faremeter standard                             |
 
 ---
 
@@ -102,10 +102,14 @@
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT UNIQUE NOT NULL,
-  api_key TEXT UNIQUE NOT NULL,  -- Format: oc_XXXXXXXXXXXX
+  api_key_hash TEXT NOT NULL,     -- bcrypt hash of the full API key (never store plain text)
+  api_key_prefix TEXT NOT NULL,   -- Visible prefix for identification (e.g., "oc_abc12345...")
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Index for API key prefix lookups during authentication
+CREATE INDEX idx_users_api_key_prefix ON users(api_key_prefix);
 
 -- Credits ledger (append-only for audit trail)
 CREATE TABLE credits (
@@ -184,7 +188,8 @@ $$ LANGUAGE SQL STABLE;
 export type User = {
   id: string;
   email: string;
-  apiKey: string;
+  apiKeyHash: string; // bcrypt hash of the full API key
+  apiKeyPrefix: string; // Visible prefix for identification (e.g., "oc_abc12345...")
   createdAt: Date;
 };
 
@@ -216,7 +221,7 @@ export type Transaction = {
 
 // API Responses
 export type BalanceResponse = {
-  balance: number;  // USD
+  balance: number; // USD
   currency: 'USD';
 };
 
@@ -236,21 +241,21 @@ export const CORBITS_URLS: Record<CorbitsEndpoint, string> = {
 };
 
 // Constants
-export const DEFAULT_MARGIN_PERCENT = 30;  // Configurable via admin dashboard
+export const DEFAULT_MARGIN_PERCENT = 30; // Configurable via admin dashboard
 export const STRIPE_FEE_PERCENT = 0.029;
-export const STRIPE_FEE_FIXED = 0.30;
+export const STRIPE_FEE_FIXED = 0.3;
 export const MIN_TOPUP_USD = 10;
 export const LOW_BALANCE_THRESHOLD = 5;
 
 // Admin config types
 export type MarginConfig = {
-  global: number;  // Default margin % (e.g., 30)
-  perEndpoint: Partial<Record<CorbitsEndpoint, number>>;  // Optional overrides
+  global: number; // Default margin % (e.g., 30)
+  perEndpoint: Partial<Record<CorbitsEndpoint, number>>; // Optional overrides
 };
 
 export type AdminConfig = {
   margin: MarginConfig;
-  walletAlertThreshold: number;  // Alert if USDC balance below this
+  walletAlertThreshold: number; // Alert if USDC balance below this
 };
 ```
 
@@ -441,26 +446,31 @@ openclawd/
 ## Implementation Phases
 
 ### Phase 1: Foundation (Wave 1-2)
+
 - Project scaffolding with faremeter conventions
 - Supabase schema setup
 - Shared types package
 
 ### Phase 2: Backend Core (Wave 3-4)
+
 - Auth service (magic link)
 - Ledger service
 - Stripe integration
 
 ### Phase 3: Wallet & Proxy (Wave 5-6)
+
 - Solana wallet setup
 - x402 integration
 - Corbits proxy routes
 
 ### Phase 4: Skill (Wave 7-8)
+
 - Command router
 - Skill logic
 - Embedded endpoint docs
 
 ### Phase 5: Integration & QA (Wave 9-10)
+
 - End-to-end testing
 - Documentation
 - Deployment config
@@ -507,7 +517,12 @@ API_BASE_URL=https://api.openclaw.ai
 
 ## Security Considerations
 
-1. **API Keys**: Generated server-side, never exposed in skill source
+1. **API Keys**:
+   - Generated server-side using cryptographically secure random bytes
+   - Stored as bcrypt hashes in the database (never plain text)
+   - Only shown to user once on creation or refresh
+   - A visible prefix (e.g., "oc_abc12345...") is stored for identification
+   - Authentication uses bcrypt.compare() to verify against stored hash
 2. **Wallet Private Key**: Stored in Vercel secrets, never logged
 3. **Stripe**: All card data handled by Stripe, webhook signatures verified
 4. **Magic Links**: Expire in 15 minutes, single-use

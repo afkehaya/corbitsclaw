@@ -3,14 +3,14 @@ packages:
   - packages/*
   - scripts/*
   - scripts
-  - "!**/node_modules/**"
-  - "!node_modules"
+  - '!**/node_modules/**'
+  - '!node_modules'
 
 catalog:
-  "@eslint/js": 9.34.0
-  "@hono/node-server": 1.19.1
-  "@supabase/supabase-js": 2.45.0
-  "@types/node": 20.19.11
+  '@eslint/js': 9.34.0
+  '@hono/node-server': 1.19.1
+  '@supabase/supabase-js': 2.45.0
+  '@types/node': 20.19.11
   arktype: 2.1.21
   dotenv: 17.2.2
   eslint: 9.34.0
@@ -22,16 +22,17 @@ catalog:
   tsx: 4.20.5
   typescript: 5.9.2
   typescript-eslint: 8.42.0
-  "@faremeter/fetch": 0.15.0
-  "@faremeter/wallet-solana": 0.15.0
-  "@faremeter/payment-solana": 0.15.0
-  "@faremeter/types": 0.15.0
-  "@solana/web3.js": 1.98.4
-  "@solana/spl-token": 0.4.13
+  '@faremeter/fetch': 0.15.0
+  '@faremeter/wallet-solana': 0.15.0
+  '@faremeter/payment-solana': 0.15.0
+  '@faremeter/types': 0.15.0
+  '@solana/web3.js': 1.98.4
+  '@solana/spl-token': 0.4.13
   bs58: 4.0.1
   resend: 3.0.0
-  bcrypt: 5.1.1
-  "@types/bcrypt": 5.0.2
+  bcryptjs: 3.0.2
+  '@types/bcryptjs': 2.4.6
 
 catalogMode: prefer
+
 linkWorkspacePackages: true

@@ -1,6 +1,6 @@
 import * as crypto from 'node:crypto';
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 import { getSupabaseClient } from '../lib/supabase.js';
 import { AuthError } from '../lib/errors.js';

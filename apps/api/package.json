@@ -13,20 +13,22 @@
     "test": "tap src/**/*.test.ts"
   },
   "dependencies": {
-    "@openclawd/shared": "workspace:*",
     "@faremeter/fetch": "catalog:",
-    "@faremeter/wallet-solana": "catalog:",
     "@faremeter/payment-solana": "catalog:",
     "@faremeter/types": "catalog:",
-    "@solana/web3.js": "catalog:",
-    "@solana/spl-token": "catalog:",
-    "bs58": "catalog:",
+    "@faremeter/wallet-solana": "catalog:",
     "@hono/node-server": "catalog:",
+    "@openclawd/shared": "workspace:*",
+    "@solana/spl-token": "catalog:",
+    "@solana/web3.js": "catalog:",
     "@supabase/supabase-js": "catalog:",
+    "bcryptjs": "catalog:",
+    "bs58": "catalog:",
     "hono": "catalog:",
     "stripe": "catalog:"
   },
   "devDependencies": {
+    "@types/bcryptjs": "catalog:",
     "@types/node": "catalog:",
     "tap": "catalog:",
     "tsx": "catalog:",

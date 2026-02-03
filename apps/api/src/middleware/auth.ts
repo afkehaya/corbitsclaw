@@ -1,7 +1,7 @@
-import type { Context, Next } from "hono";
+import type { Context, Next } from 'hono';
 
-import { AuthError } from "../lib/errors.js";
-import { validateApiKey, type User } from "../services/auth.js";
+import { AuthError } from '../lib/errors.js';
+import { validateApiKey, type User } from '../services/auth.js';
 
 /**
  * Extended Hono context with user attached
@@ -20,8 +20,8 @@ function extractBearerToken(authHeader: string | undefined): string | null {
     return null;
   }
 
-  const parts = authHeader.split(" ");
-  if (parts.length !== 2 || parts[0]?.toLowerCase() !== "bearer") {
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0]?.toLowerCase() !== 'bearer') {
     return null;
   }
 
@@ -33,21 +33,21 @@ function extractBearerToken(authHeader: string | undefined): string | null {
  * Attaches the user to the Hono context if valid.
  * Returns 401 if authentication fails.
  */
-export async function authMiddleware(c: Context, next: Next): Promise<Response | void> {
-  const authHeader = c.req.header("Authorization");
+export async function authMiddleware(c: Context, next: Next): Promise<void> {
+  const authHeader = c.req.header('Authorization');
   const token = extractBearerToken(authHeader);
 
   if (!token) {
-    throw new AuthError("Missing or invalid Authorization header");
+    throw new AuthError('Missing or invalid Authorization header');
   }
 
   const user = await validateApiKey(token);
   if (!user) {
-    throw new AuthError("Invalid API key");
+    throw new AuthError('Invalid API key');
   }
 
   // Attach user to context
-  c.set("user", user);
+  c.set('user', user);
 
   await next();
 }
@@ -57,9 +57,9 @@ export async function authMiddleware(c: Context, next: Next): Promise<Response |
  * Should only be used in routes protected by authMiddleware.
  */
 export function getAuthUser(c: Context): User {
-  const user = c.get("user") as User | undefined;
+  const user = c.get('user') as User | undefined;
   if (!user) {
-    throw new AuthError("User not found in context");
+    throw new AuthError('User not found in context');
   }
   return user;
 }
