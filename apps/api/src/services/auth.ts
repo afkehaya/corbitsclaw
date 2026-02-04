@@ -7,9 +7,9 @@ import { AuthError } from '../lib/errors.js';
 import { sendMagicLink } from './email.js';
 
 const MAGIC_LINK_EXPIRY_MINUTES = 15;
-const API_KEY_PREFIX = 'oc_';
+const API_KEY_PREFIX = 'cc_';
 const API_KEY_RANDOM_LENGTH = 32; // Random part length (hex chars)
-const API_KEY_VISIBLE_PREFIX_LENGTH = 8; // Visible portion after oc_ for identification
+const API_KEY_VISIBLE_PREFIX_LENGTH = 8; // Visible portion after cc_ for identification
 const BCRYPT_ROUNDS = 10;
 
 /**
@@ -19,7 +19,7 @@ export interface User {
   id: string;
   email: string;
   api_key_hash: string; // bcrypt hash of the full API key
-  api_key_prefix: string; // Visible prefix for identification (e.g., oc_abc12345...)
+  api_key_prefix: string; // Visible prefix for identification (e.g., cc_abc12345...)
   created_at: string;
   updated_at: string;
 }
@@ -57,7 +57,7 @@ export interface GeneratedApiKey {
 }
 
 /**
- * Generates an API key in the format oc_XXXXXXXXXXXX.
+ * Generates an API key in the format cc_XXXXXXXXXXXX.
  * Returns both the full key (shown to user once) and the hash/prefix for storage.
  */
 export async function generateApiKey(): Promise<GeneratedApiKey> {
@@ -70,7 +70,7 @@ export async function generateApiKey(): Promise<GeneratedApiKey> {
 
   const fullKey = `${API_KEY_PREFIX}${randomPart}`;
 
-  // Create visible prefix for identification (e.g., "oc_abc12345...")
+  // Create visible prefix for identification (e.g., "cc_abc12345...")
   const visiblePrefix = `${API_KEY_PREFIX}${randomPart.slice(0, API_KEY_VISIBLE_PREFIX_LENGTH)}...`;
 
   // Hash the full key for secure storage
@@ -126,7 +126,7 @@ export async function generateMagicLink(email: string): Promise<void> {
 export interface VerifyMagicLinkResult {
   /** Full API key for new users, null for existing users */
   apiKey: string | null;
-  /** Visible prefix for identification (e.g., "oc_abc12345...") */
+  /** Visible prefix for identification (e.g., "cc_abc12345...") */
   apiKeyPrefix: string;
   /** User's email address */
   email: string;

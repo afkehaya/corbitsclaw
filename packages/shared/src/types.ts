@@ -1,13 +1,13 @@
 // User
-export type User = {
+export interface User {
   id: string;
   email: string;
   apiKey: string;
   createdAt: Date;
-};
+}
 
 // Credit entry
-export type CreditEntry = {
+export interface CreditEntry {
   id: string;
   userId: string;
   amount: number;
@@ -16,14 +16,14 @@ export type CreditEntry = {
   stripeSessionId?: string | undefined;
   requestId?: string | undefined;
   createdAt: Date;
-};
+}
 
 // Transaction with cost breakdown
-export type Transaction = {
+export interface Transaction {
   id: string;
   userId: string;
   requestId: string;
-  endpoint: CorbitsEndpoint;
+  endpoint: string;
   path: string;
   costX402: number; // What Corbits charged us
   costMargin: number; // Our margin
@@ -32,30 +32,28 @@ export type Transaction = {
   responseStatus?: number | undefined;
   responseTimeMs?: number | undefined;
   createdAt: Date;
-};
+}
 
 // API Responses
-export type BalanceResponse = {
+export interface BalanceResponse {
   balance: number;
   currency: 'USD';
-};
+}
 
-export type UsageResponse = {
+// Usage response
+export interface UsageResponse {
   transactions: Transaction[];
   total: number;
   period: { start: Date; end: Date };
-};
-
-// Corbits Endpoints
-export type CorbitsEndpoint = 'xai' | 'openai' | 'amazon';
+}
 
 // Admin config types
-export type MarginConfig = {
+export interface MarginConfig {
   global: number;
-  perEndpoint: Partial<Record<CorbitsEndpoint, number>>;
-};
+  perEndpoint: Record<string, number>;
+}
 
-export type AdminConfig = {
+export interface AdminConfig {
   margin: MarginConfig;
   walletAlertThreshold: number;
-};
+}

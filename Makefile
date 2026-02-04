@@ -7,8 +7,10 @@ lint:
 	pnpm eslint --cache .
 
 build:
+	pnpm -r build
 
 test:
+	pnpm -r test
 
 format:
 	pnpm prettier -w .

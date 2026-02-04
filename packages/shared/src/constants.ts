@@ -1,10 +1,5 @@
-import type { CorbitsEndpoint } from './types.js';
-
-export const CORBITS_URLS: Record<CorbitsEndpoint, string> = {
-  xai: 'https://xai.alez-848f79.api.corbits.dev',
-  openai: 'https://open-ai.alez-848f79.api.corbits.dev',
-  amazon: 'https://amazon.alez-848f79.api.corbits.dev',
-};
+export const CORBITS_DISCOVERY_API = 'https://api.corbits.dev/api/v1';
+export const PROXY_CACHE_TTL_MS = 300_000; // 5 minutes
 
 export const DEFAULT_MARGIN_PERCENT = 30;
 export const STRIPE_FEE_PERCENT = 0.029;

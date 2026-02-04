@@ -7,7 +7,7 @@
  * 3. Shared constants defaults
  */
 
-import { DEFAULT_MARGIN_PERCENT } from '@openclawd/shared';
+import { DEFAULT_MARGIN_PERCENT } from '@corbitsclaw/shared';
 import { getSupabaseClient } from '../lib/supabase.js';
 
 /**
@@ -57,7 +57,7 @@ function getMarginPercentFromEnv(): number {
  * 1. Cached value from database (if valid)
  * 2. Database lookup (admin_settings table)
  * 3. MARGIN_PERCENT environment variable
- * 4. DEFAULT_MARGIN_PERCENT from @openclawd/shared
+ * 4. DEFAULT_MARGIN_PERCENT from @corbitsclaw/shared
  *
  * @returns The margin percentage (e.g., 30 for 30%)
  */

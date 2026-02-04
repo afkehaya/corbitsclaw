@@ -47,7 +47,7 @@ app.onError((err: Error, c: Context) => {
 
 // Health check endpoint
 app.get('/', (c: Context) => {
-  return c.json({ status: 'ok', service: '@openclawd/api' });
+  return c.json({ status: 'ok', service: '@corbitsclaw/api' });
 });
 
 app.get('/health', (c: Context) => {
@@ -58,18 +58,17 @@ app.get('/health', (c: Context) => {
 if (process.env.NODE_ENV !== 'production') {
   // Diagnostic endpoint to test wallet initialization
   app.get('/debug/wallet', async (c: Context) => {
-    const { initWallet, getWalletPublicKey, isWalletInitialized } =
-      await import('./services/wallet.js');
+    const { initWallet, isWalletInitialized } = await import(
+      './services/wallet.js'
+    );
 
     try {
       const wasInitialized = isWalletInitialized();
       await initWallet();
-      const pubkey = getWalletPublicKey();
 
       return c.json({
         success: true,
         wasAlreadyInitialized: wasInitialized,
-        publicKey: pubkey,
         hasPrivateKey: !!process.env.SOLANA_PRIVATE_KEY,
         privateKeyLength: process.env.SOLANA_PRIVATE_KEY?.length ?? 0,
       });
@@ -114,7 +113,8 @@ if (process.env.NODE_ENV !== 'production') {
           model: 'grok-3-mini',
           input: 'Say hello briefly',
         },
-        'POST'
+        'POST',
+        { allowZeroCost: true }
       );
       timings.x402Request = Date.now() - reqStart;
       timings.total = Date.now() - start;
@@ -150,7 +150,7 @@ app.route('/stripe', stripeRoutes);
 app.route('/gateway', gatewayRoutes);
 app.route('/admin', adminRoutes);
 
-// Export for Vercel edge functions
+// Export for Vercel
 export default app;
 
 // Local development server

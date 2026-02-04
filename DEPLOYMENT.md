@@ -1,6 +1,6 @@
-# OpenClawd Deployment Guide
+# CorbitsClaw Deployment Guide
 
-Complete step-by-step guide to deploying OpenClawd to production.
+Complete step-by-step guide to deploying CorbitsClaw to production.
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ Before starting, ensure you have:
 - [ ] Stripe account
 - [ ] Solana wallet with USDC
 - [ ] Resend account (for emails)
-- [ ] Domain for the API (e.g., api.openclaw.ai)
+- [ ] Vercel project (deployed at `clawdmeter.vercel.app`)
 
 ## Step 1: Supabase Setup
 
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) NOT NULL,
   request_id TEXT UNIQUE NOT NULL,
-  endpoint TEXT NOT NULL CHECK (endpoint IN ('xai', 'openai', 'amazon')),
+  endpoint TEXT NOT NULL,
   path TEXT NOT NULL,
   cost_x402 DECIMAL(12,6) NOT NULL,
   cost_margin DECIMAL(12,6) NOT NULL,
@@ -122,9 +122,6 @@ $$ LANGUAGE SQL STABLE;
 -- Default config values
 INSERT INTO config (key, value) VALUES
   ('margin_global', '{"percent": 30}'),
-  ('margin_xai', '{"percent": null}'),
-  ('margin_openai', '{"percent": null}'),
-  ('margin_amazon', '{"percent": null}'),
   ('wallet_alert_threshold', '{"usd": 1000}'),
   ('admin_password_hash', '{"hash": null}')
 ON CONFLICT (key) DO NOTHING;
@@ -196,7 +193,7 @@ CREATE POLICY "Service role full access" ON magic_links
 
 1. Go to Developers > Webhooks
 2. Add endpoint:
-   - **URL**: `https://api.openclaw.ai/stripe/webhook`
+   - **URL**: `https://clawdmeter.vercel.app/stripe/webhook`
    - **Events to listen for**:
      - `checkout.session.completed`
      - `payment_intent.succeeded`
@@ -209,12 +206,12 @@ CREATE POLICY "Service role full access" ON magic_links
 
 For fixed credit packages, create Stripe Products:
 
-| Product | Price | Credits |
-|---------|-------|---------|
-| Credits $10 | $10.00 | $10 |
-| Credits $25 | $25.00 | $25 |
-| Credits $50 | $50.00 | $50 |
-| Credits $100 | $100.00 | $100 |
+| Product      | Price   | Credits |
+| ------------ | ------- | ------- |
+| Credits $10  | $10.00  | $10     |
+| Credits $25  | $25.00  | $25     |
+| Credits $50  | $50.00  | $50     |
+| Credits $100 | $100.00 | $100    |
 
 ---
 
@@ -225,7 +222,7 @@ For fixed credit packages, create Stripe Products:
 Using Solana CLI:
 
 ```bash
-solana-keygen new --outfile ~/.config/solana/openclawd-wallet.json
+solana-keygen new --outfile ~/.config/solana/corbitsclaw-wallet.json
 ```
 
 Or use any Solana wallet (Phantom, Solflare) and export the private key.
@@ -243,7 +240,15 @@ const privateKey = bs58.encode(Buffer.from(keypair));
 console.log(privateKey);
 ```
 
-### 3.3 Fund the Wallet
+### 3.3 Wallet Configuration
+
+CorbitsClaw uses `@faremeter/rides` for all x402 payments. The wallet only requires a single environment variable:
+
+- **`SOLANA_PRIVATE_KEY`**: Base58-encoded private key for the Solana wallet
+
+The `@faremeter/rides` package handles RPC connections, payment signing, and transaction submission automatically. No separate RPC URL configuration is needed.
+
+### 3.4 Fund the Wallet
 
 1. Get the public address from the wallet
 2. Transfer USDC to the wallet:
@@ -251,17 +256,6 @@ console.log(privateKey);
    - Recommended starting balance: $1,000+ USDC
 
 3. Ensure there's a small amount of SOL for transaction fees (~0.1 SOL)
-
-### 3.4 RPC Configuration (Automatic)
-
-OpenClawd uses **Corbits Helius** (`https://helius.api.corbits.dev`) as the primary RPC.
-- Cost: 0.01 USDC per request (paid via x402 from your wallet)
-- No API key required - payment handled automatically
-- More reliable than rate-limited public endpoints
-
-A public Solana RPC is used only for payment transaction submission (bootstrap).
-
-**No RPC_URL configuration needed** - this is handled automatically.
 
 ---
 
@@ -274,7 +268,7 @@ A public Solana RPC is used only for payment transaction submission (bootstrap).
 
 ### 4.2 Verify Domain
 
-1. Add your domain (e.g., `openclaw.ai`)
+1. Add your sending domain (e.g., `yourdomain.com`)
 2. Add the required DNS records
 3. Wait for verification
 
@@ -314,9 +308,8 @@ SUPABASE_ANON_KEY=eyJ...
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
-# Solana
+# Solana (used by @faremeter/rides for x402 payments)
 SOLANA_PRIVATE_KEY=base58_encoded_private_key_here
-# RPC_URL not needed - uses Corbits Helius (x402) automatically
 
 # Email
 RESEND_API_KEY=re_...
@@ -347,6 +340,7 @@ curl https://your-project.vercel.app/health
 ```
 
 Expected response:
+
 ```json
 {
   "status": "healthy",
@@ -356,45 +350,18 @@ Expected response:
 
 ---
 
-## Step 6: Domain Configuration
-
-### 6.1 Add Custom Domain in Vercel
-
-1. Go to Project > Settings > Domains
-2. Add `api.openclaw.ai`
-3. Follow DNS configuration instructions
-
-### 6.2 Update DNS
-
-Add the required records at your DNS provider:
-- **CNAME**: `api` -> `cname.vercel-dns.com`
-
-Or if using apex domain:
-- **A**: `@` -> Vercel IP addresses
-
-### 6.3 Wait for SSL
-
-Vercel automatically provisions SSL certificates. This may take a few minutes.
-
-### 6.4 Update Stripe Webhook
-
-Update the webhook URL in Stripe to use your custom domain:
-`https://api.openclaw.ai/stripe/webhook`
-
----
-
 ## Environment Variables Reference
 
-| Variable | Required | Description | Example |
-|----------|----------|-------------|---------|
-| `SUPABASE_URL` | Yes | Supabase project URL | `https://xxx.supabase.co` |
-| `SUPABASE_ANON_KEY` | Yes | Supabase anonymous key | `eyJ...` |
-| `STRIPE_SECRET_KEY` | Yes | Stripe secret key | `sk_live_...` |
-| `STRIPE_WEBHOOK_SECRET` | Yes | Stripe webhook signing secret | `whsec_...` |
-| `SOLANA_PRIVATE_KEY` | Yes | Base58 encoded private key | `5abc...` |
-| `RESEND_API_KEY` | Yes | Resend API key for emails | `re_...` |
-| `ADMIN_API_KEY` | Yes | Admin authentication key | Random string |
-| `MARGIN_PERCENT` | No | Default margin on API calls | `30` |
+| Variable                | Required | Description                   | Example                   |
+| ----------------------- | -------- | ----------------------------- | ------------------------- |
+| `SUPABASE_URL`          | Yes      | Supabase project URL          | `https://xxx.supabase.co` |
+| `SUPABASE_ANON_KEY`     | Yes      | Supabase anonymous key        | `eyJ...`                  |
+| `STRIPE_SECRET_KEY`     | Yes      | Stripe secret key             | `sk_live_...`             |
+| `STRIPE_WEBHOOK_SECRET` | Yes      | Stripe webhook signing secret | `whsec_...`               |
+| `SOLANA_PRIVATE_KEY`    | Yes      | Base58 encoded private key    | `5abc...`                 |
+| `RESEND_API_KEY`        | Yes      | Resend API key for emails     | `re_...`                  |
+| `ADMIN_API_KEY`         | Yes      | Admin authentication key      | Random string             |
+| `MARGIN_PERCENT`        | No       | Default margin on API calls   | `30`                      |
 
 ---
 
@@ -407,8 +374,6 @@ Update the webhook URL in Stripe to use your custom domain:
 - [ ] Verify wallet has sufficient USDC balance
 - [ ] Test gateway endpoints with a small request
 - [ ] Admin endpoints return correct metrics
-- [ ] SSL certificate is active
-- [ ] Custom domain resolves correctly
 
 ---
 
@@ -417,6 +382,7 @@ Update the webhook URL in Stripe to use your custom domain:
 ### Vercel Logs
 
 View real-time logs:
+
 ```bash
 vercel logs --follow
 ```
@@ -424,6 +390,7 @@ vercel logs --follow
 ### Supabase
 
 Monitor database in Supabase Dashboard:
+
 - Table Editor: View data
 - Logs: Database queries
 - Reports: Usage statistics
@@ -431,13 +398,14 @@ Monitor database in Supabase Dashboard:
 ### Wallet Balance
 
 Monitor the Solana wallet balance and set up alerts:
+
 ```bash
 # Check balance
 solana balance <WALLET_ADDRESS> --url mainnet-beta
 ```
 
 Set up low balance alerts through:
-- Helius webhooks
+
 - Custom monitoring script
 - Solana FM notifications
 
@@ -479,10 +447,10 @@ Set up low balance alerts through:
 
 ### Gateway Errors (502)
 
-1. Check Corbits endpoint status
-2. Verify wallet has USDC
+1. Verify wallet has USDC for x402 payments
+2. Check that the target endpoint is available via `@faremeter/rides`
 3. Check x402 payment is succeeding
-4. Review transaction logs
+4. Review transaction logs in Supabase
 
 ---
 
@@ -515,6 +483,7 @@ To deploy updates:
    ```
 
 For database schema changes:
+
 1. Test migrations in a staging environment first
 2. Run SQL in Supabase SQL Editor
 3. Update application code

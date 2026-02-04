@@ -11,8 +11,12 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "paths": {
-      "@openclawd/shared": ["../packages/shared/src/index.ts"]
+      "@corbitsclaw/shared": ["../packages/shared/src/index.ts"]
     }
   },
-  "include": ["*.ts", "../apps/api/src/**/*.ts", "../packages/shared/src/**/*.ts"]
+  "include": [
+    "*.ts",
+    "../apps/api/src/**/*.ts",
+    "../packages/shared/src/**/*.ts"
+  ]
 }

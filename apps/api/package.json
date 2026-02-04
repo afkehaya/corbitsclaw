@@ -1,5 +1,5 @@
 {
-  "name": "@openclawd/api",
+  "name": "@corbitsclaw/api",
   "version": "0.0.1",
   "type": "module",
   "main": "./src/index.ts",
@@ -13,17 +13,12 @@
     "test": "tap --allow-incomplete-coverage src/services/*.test.ts && npx tsx --test src/routes/gateway.test.ts"
   },
   "dependencies": {
-    "@faremeter/fetch": "catalog:",
-    "@faremeter/payment-solana": "catalog:",
+    "@corbitsclaw/shared": "workspace:*",
+    "@faremeter/rides": "catalog:",
     "@faremeter/types": "catalog:",
-    "@faremeter/wallet-solana": "catalog:",
     "@hono/node-server": "catalog:",
-    "@openclawd/shared": "workspace:*",
-    "@solana/spl-token": "catalog:",
-    "@solana/web3.js": "catalog:",
     "@supabase/supabase-js": "catalog:",
     "bcryptjs": "catalog:",
-    "bs58": "catalog:",
     "hono": "catalog:",
     "stripe": "catalog:"
   },

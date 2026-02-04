@@ -12,8 +12,6 @@
 import * as crypto from 'node:crypto';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
-import { CORBITS_URLS } from '@openclawd/shared';
-import type { CorbitsEndpoint } from '@openclawd/shared';
 
 import { authMiddleware, getAuthUser } from '../middleware/auth.js';
 import {
@@ -29,6 +27,7 @@ import {
 } from '../services/wallet.js';
 import { InsufficientBalanceError } from '../lib/errors.js';
 import { getMarginPercentSync } from '../services/config.js';
+import { resolveProxy } from '../services/proxy-resolver.js';
 
 // Minimum balance threshold for requests (in USD)
 const MIN_BALANCE_THRESHOLD = 0.01;
@@ -64,14 +63,15 @@ gatewayRoutes.use('/*', authMiddleware);
  */
 async function handleGatewayRequest(
   c: Context,
-  endpoint: CorbitsEndpoint,
+  proxyName: string,
+  proxyUrl: string,
   path: string
 ): Promise<Response> {
   const requestId = generateRequestId();
   const startTime = Date.now();
   const timings: Record<string, number> = {};
 
-  console.log(`[${requestId}] Gateway request started: ${endpoint} ${path}`);
+  console.log(`[${requestId}] Gateway request started: ${proxyName} ${path}`);
 
   const user = getAuthUser(c);
   timings.getUser = Date.now() - startTime;
@@ -112,11 +112,7 @@ async function handleGatewayRequest(
   timings.parseBody = Date.now() - bodyStart;
   console.log(`[${requestId}] Body parsed in ${timings.parseBody}ms`);
 
-  // Get the Corbits endpoint URL
-  // Corbits handles the routing internally, so we just POST to /
-  const baseUrl = CORBITS_URLS[endpoint];
-
-  console.log(`[${requestId}] Proxying to ${baseUrl} (path: ${path})`);
+  console.log(`[${requestId}] Proxying to ${proxyUrl} (path: ${path})`);
 
   // Make the x402 request
   let responseStatus: number | undefined;
@@ -124,7 +120,9 @@ async function handleGatewayRequest(
   let data: unknown;
 
   try {
-    const result = await makeX402Request(baseUrl, '/', body, 'POST');
+    const result = await makeX402Request(proxyUrl, path, body, 'POST', {
+      allowZeroCost: true,
+    });
     data = result.data;
     responseStatus = result.response.status;
     costX402 = atomicToUsd(result.costPaid);
@@ -144,7 +142,7 @@ async function handleGatewayRequest(
         await recordTransaction({
           userId: user.id,
           requestId,
-          endpoint,
+          endpoint: proxyName,
           path: path,
           costX402: 0,
           costMargin: 0,
@@ -175,7 +173,7 @@ async function handleGatewayRequest(
       await recordTransaction({
         userId: user.id,
         requestId,
-        endpoint,
+        endpoint: proxyName,
         path: path,
         costX402: 0,
         costMargin: 0,
@@ -224,7 +222,7 @@ async function handleGatewayRequest(
         user.id,
         costTotal,
         requestId,
-        `${endpoint.toUpperCase()} API: ${path}`
+        `${proxyName.toUpperCase()} API: ${path}`
       );
     }
 
@@ -232,7 +230,7 @@ async function handleGatewayRequest(
     await recordTransaction({
       userId: user.id,
       requestId,
-      endpoint,
+      endpoint: proxyName,
       path: path,
       costX402,
       costMargin,
@@ -276,31 +274,13 @@ async function handleGatewayRequest(
 }
 
 /**
- * POST /gateway/xai/*
- * Proxy requests to xAI/Grok endpoint.
+ * POST /gateway/:proxy/*
+ * Dynamic proxy route - resolves the proxy name via the discovery API
+ * and forwards the request to the resolved endpoint.
  */
-gatewayRoutes.post('/xai/*', async (c: Context) => {
-  // Extract path after /xai/
-  const path = c.req.path.replace(/^\/gateway\/xai/, '');
-  return handleGatewayRequest(c, 'xai', path);
-});
-
-/**
- * POST /gateway/openai/*
- * Proxy requests to OpenAI endpoint.
- */
-gatewayRoutes.post('/openai/*', async (c: Context) => {
-  // Extract path after /openai/
-  const path = c.req.path.replace(/^\/gateway\/openai/, '');
-  return handleGatewayRequest(c, 'openai', path);
-});
-
-/**
- * POST /gateway/amazon/*
- * Proxy requests to Amazon/Crossmint endpoint.
- */
-gatewayRoutes.post('/amazon/*', async (c: Context) => {
-  // Extract path after /amazon/
-  const path = c.req.path.replace(/^\/gateway\/amazon/, '');
-  return handleGatewayRequest(c, 'amazon', path);
+gatewayRoutes.post('/:proxy/*', async (c) => {
+  const proxy = c.req.param('proxy');
+  const path = c.req.path.replace(`/gateway/${proxy}`, '') || '/';
+  const proxyUrl = await resolveProxy(proxy);
+  return handleGatewayRequest(c, proxy, proxyUrl, path);
 });

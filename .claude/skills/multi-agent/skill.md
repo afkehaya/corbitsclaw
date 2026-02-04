@@ -16,6 +16,7 @@ Automated parallel development workflow using Claude's Task system and specializ
 When the user runs `/multi-agent init`:
 
 1. **Create project structure**:
+
    ```
    docs/
    ├── PRD.md          (copy from templates/PRD-TEMPLATE.md)
@@ -24,6 +25,7 @@ When the user runs `/multi-agent init`:
    ```
 
 2. **Prompt user**:
+
    ```
    Project initialized! Next steps:
 
@@ -42,6 +44,7 @@ When the user runs `/multi-agent plan <prd-file>`:
 ### Step 2.1: Validate PRD completeness
 
 Read the PRD file and check for required sections:
+
 - [ ] Project Overview (problem, solution, success metrics)
 - [ ] User Stories (at least 3)
 - [ ] Core Features (prioritized)
@@ -57,25 +60,32 @@ Create `docs/TECHNICAL.md` containing:
 # Technical Specification
 
 ## Tech Stack
+
 [Analyze PRD requirements and recommend appropriate stack]
+
 - Frontend: [framework + rationale]
 - Backend: [framework + rationale]
 - Database: [type + rationale]
 - Infrastructure: [hosting + rationale]
 
 ## Architecture
+
 [System diagram in mermaid or ASCII]
 
 ## Data Models
+
 [Core entities and relationships]
 
 ## API Design
+
 [Key endpoints]
 
 ## File Structure
+
 [Proposed directory layout]
 
 ## Implementation Phases
+
 [Ordered phases with dependencies]
 ```
 
@@ -84,6 +94,7 @@ Create `docs/TECHNICAL.md` containing:
 Use TaskCreate to build the task list. Follow these rules:
 
 **Task Decomposition Rules:**
+
 1. Each task should be completable by a single specialist agent
 2. Tasks touching different files/modules can run in parallel
 3. Tasks touching the same files must have explicit dependencies (blockedBy)
@@ -91,6 +102,7 @@ Use TaskCreate to build the task list. Follow these rules:
 5. Include verification tasks after implementation tasks
 
 **Standard Task Categories:**
+
 - `SETUP` - Project scaffolding, dependencies, config
 - `BACKEND` - API, database, business logic
 - `FRONTEND` - UI components, pages, state
@@ -99,11 +111,13 @@ Use TaskCreate to build the task list. Follow these rules:
 - `DOCS` - Documentation, README, API docs
 
 **Task Naming Convention:**
+
 ```
 [CATEGORY] Brief description
 ```
 
 **Example TaskList structure:**
+
 ```
 Task 1: [SETUP] Initialize project with selected stack
 Task 2: [SETUP] Configure development environment
@@ -120,6 +134,7 @@ Task 10: [DOCS] Generate API documentation (blocked by: 4)
 ### Step 2.4: Present plan for approval
 
 Display:
+
 1. The technical specification summary
 2. The TaskList with dependency graph
 3. Which tasks will run in parallel (visualize waves)
@@ -213,6 +228,7 @@ Task tool call 2:
 ### Step 3.5: Final integration
 
 When all tasks complete:
+
 1. Remove worktrees
 2. Run full test suite
 3. Generate completion report
@@ -278,20 +294,25 @@ Agents communicate via scratchpad files in `.worktrees/.scratchpad/`:
 ```
 
 **Scratchpad format:**
+
 ```markdown
 # [Agent Name] Status
 
 ## Current Task
+
 [Task ID and description]
 
 ## Progress
+
 - [x] Step 1
 - [ ] Step 2
 
 ## Needs from other agents
+
 [If waiting on something from another agent]
 
 ## Completed artifacts
+
 - path/to/file.ts - [description]
 ```
 
@@ -302,12 +323,14 @@ Agents should read other scratchpads before starting work to check for dependenc
 ## Error Handling
 
 **If an agent fails:**
+
 1. Mark task as blocked (not failed)
 2. Write failure reason to `.worktrees/.scratchpad/blockers.md`
 3. Continue with other tasks
 4. Report blocker to user during status check
 
 **If merge conflicts occur:**
+
 1. Pause new agent spawning
 2. Alert user with conflict details
 3. Wait for user to resolve
@@ -318,6 +341,7 @@ Agents should read other scratchpads before starting work to check for dependenc
 ## The 3-Task Rule
 
 If the project has fewer than 3 tasks after planning:
+
 - Skip the full multi-agent workflow
 - Execute tasks directly without spawning agents
 - Inform user: "Small project detected. Executing directly without parallel agents."

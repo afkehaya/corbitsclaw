@@ -1,9 +1,5 @@
 import { getSupabaseClient } from '../lib/supabase.js';
-import type {
-  CreditEntry,
-  Transaction,
-  CorbitsEndpoint,
-} from '@openclawd/shared';
+import type { CreditEntry, Transaction } from '@corbitsclaw/shared';
 
 /**
  * Get the current balance for a user by summing all credit entries.
@@ -330,7 +326,7 @@ export async function adjustReservation(
 export interface RecordTransactionInput {
   userId: string;
   requestId: string;
-  endpoint: CorbitsEndpoint;
+  endpoint: string;
   path: string;
   costX402: number;
   costMargin: number;
@@ -432,7 +428,7 @@ function mapTransaction(row: {
     id: row.id,
     userId: row.user_id,
     requestId: row.request_id,
-    endpoint: row.endpoint as CorbitsEndpoint,
+    endpoint: row.endpoint,
     path: row.path,
     costX402: Number(row.cost_x402),
     costMargin: Number(row.cost_margin),

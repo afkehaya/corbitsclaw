@@ -7,6 +7,7 @@
 ## 1. Project Overview
 
 ### Problem Statement
+
 What problem are you solving? Who experiences this problem?
 
 ```
@@ -14,6 +15,7 @@ What problem are you solving? Who experiences this problem?
 ```
 
 ### Proposed Solution
+
 What are you building to solve this problem?
 
 ```
@@ -21,6 +23,7 @@ What are you building to solve this problem?
 ```
 
 ### Success Metrics
+
 How will you know if this project succeeded?
 
 - [ ] Metric 1: [e.g., "Users can complete checkout in under 60 seconds"]
@@ -32,27 +35,34 @@ How will you know if this project succeeded?
 ## 2. User Stories
 
 Write at least 3 user stories in this format:
+
 > As a [type of user], I want [goal] so that [benefit].
 
 ### Story 1: [Title]
+
 As a **[user type]**, I want **[action/feature]** so that **[benefit/outcome]**.
 
 **Acceptance Criteria:**
+
 - [ ] [Specific testable requirement]
 - [ ] [Specific testable requirement]
 - [ ] [Specific testable requirement]
 
 ### Story 2: [Title]
+
 As a **[user type]**, I want **[action/feature]** so that **[benefit/outcome]**.
 
 **Acceptance Criteria:**
+
 - [ ] [Specific testable requirement]
 - [ ] [Specific testable requirement]
 
 ### Story 3: [Title]
+
 As a **[user type]**, I want **[action/feature]** so that **[benefit/outcome]**.
 
 **Acceptance Criteria:**
+
 - [ ] [Specific testable requirement]
 - [ ] [Specific testable requirement]
 
@@ -62,18 +72,19 @@ As a **[user type]**, I want **[action/feature]** so that **[benefit/outcome]**.
 
 List features in priority order (P0 = must have, P1 = should have, P2 = nice to have).
 
-| Priority | Feature | Description |
-|----------|---------|-------------|
-| P0 | [Feature name] | [Brief description] |
-| P0 | [Feature name] | [Brief description] |
-| P1 | [Feature name] | [Brief description] |
-| P2 | [Feature name] | [Brief description] |
+| Priority | Feature        | Description         |
+| -------- | -------------- | ------------------- |
+| P0       | [Feature name] | [Brief description] |
+| P0       | [Feature name] | [Brief description] |
+| P1       | [Feature name] | [Brief description] |
+| P2       | [Feature name] | [Brief description] |
 
 ---
 
 ## 4. Technical Constraints
 
 ### Required Technologies
+
 List any technologies that MUST be used (leave blank if flexible):
 
 - **Frontend**: [e.g., "React" or "No preference"]
@@ -83,6 +94,7 @@ List any technologies that MUST be used (leave blank if flexible):
 - **Other**: [e.g., "Must integrate with Stripe"]
 
 ### Constraints
+
 - **Timeline**: [e.g., "MVP in 2 weeks"]
 - **Budget**: [e.g., "Free tier only" or "Up to $100/month"]
 - **Team size**: [e.g., "Solo developer" or "3 engineers"]

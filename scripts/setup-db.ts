@@ -1,5 +1,5 @@
 const schema = `
--- OpenClawd Database Schema
+-- CorbitsClaw Database Schema
 -- Run this in Supabase SQL Editor
 
 -- Users table
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) NOT NULL,
   request_id TEXT UNIQUE NOT NULL,
-  endpoint TEXT NOT NULL CHECK (endpoint IN ('xai', 'openai', 'amazon')),
+  endpoint TEXT NOT NULL,
   path TEXT NOT NULL,
   cost_x402 DECIMAL(12,6) NOT NULL,
   cost_margin DECIMAL(12,6) NOT NULL,
@@ -82,6 +82,113 @@ RETURNS DECIMAL AS $$
   FROM credits
   WHERE user_id = p_user_id;
 $$ LANGUAGE SQL STABLE;
+
+-- Atomic balance check and reserve function
+-- This function atomically checks if a user has sufficient balance and reserves the amount
+-- by inserting a pending usage record. Uses row-level locking to prevent race conditions.
+-- Returns the reservation (credit entry) ID on success, NULL if insufficient balance.
+CREATE OR REPLACE FUNCTION reserve_balance(
+  p_user_id UUID,
+  p_amount DECIMAL,
+  p_request_id TEXT,
+  p_description TEXT DEFAULT 'Reserved for API request'
+)
+RETURNS UUID AS $$
+DECLARE
+  v_balance DECIMAL;
+  v_reservation_id UUID;
+BEGIN
+  -- Lock the user's credit rows to prevent concurrent modifications
+  -- This ensures atomicity across check and reserve operations
+  PERFORM 1 FROM credits WHERE user_id = p_user_id FOR UPDATE;
+
+  -- Calculate current balance
+  SELECT COALESCE(SUM(amount), 0) INTO v_balance
+  FROM credits
+  WHERE user_id = p_user_id;
+
+  -- Check if balance is sufficient
+  IF v_balance < p_amount THEN
+    RETURN NULL;
+  END IF;
+
+  -- Insert the reservation (negative amount for usage)
+  INSERT INTO credits (user_id, amount, type, description, request_id)
+  VALUES (p_user_id, -p_amount, 'usage', p_description, p_request_id)
+  RETURNING id INTO v_reservation_id;
+
+  RETURN v_reservation_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to cancel a reservation (refund the reserved amount)
+-- Used when an API request fails and we need to restore the user's balance
+CREATE OR REPLACE FUNCTION cancel_reservation(
+  p_reservation_id UUID
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+  v_user_id UUID;
+  v_amount DECIMAL;
+  v_request_id TEXT;
+BEGIN
+  -- Get the original reservation details
+  SELECT user_id, amount, request_id INTO v_user_id, v_amount, v_request_id
+  FROM credits
+  WHERE id = p_reservation_id AND type = 'usage';
+
+  IF v_user_id IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  -- Insert a refund entry to reverse the reservation
+  INSERT INTO credits (user_id, amount, type, description, request_id)
+  VALUES (v_user_id, -v_amount, 'refund', 'Cancelled reservation', v_request_id);
+
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to adjust a reservation to the actual amount charged
+-- Used when the actual x402 cost differs from the reserved amount
+CREATE OR REPLACE FUNCTION adjust_reservation(
+  p_reservation_id UUID,
+  p_actual_amount DECIMAL,
+  p_description TEXT DEFAULT NULL
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+  v_user_id UUID;
+  v_reserved_amount DECIMAL;
+  v_request_id TEXT;
+  v_difference DECIMAL;
+BEGIN
+  -- Get the original reservation details (amount is negative for usage)
+  SELECT user_id, amount, request_id INTO v_user_id, v_reserved_amount, v_request_id
+  FROM credits
+  WHERE id = p_reservation_id AND type = 'usage';
+
+  IF v_user_id IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  -- Calculate the difference (reserved is negative, actual should be positive input)
+  -- If we reserved more than actual, we need to refund the difference
+  v_difference := (-v_reserved_amount) - p_actual_amount;
+
+  IF v_difference > 0 THEN
+    -- Refund the excess
+    INSERT INTO credits (user_id, amount, type, description, request_id)
+    VALUES (v_user_id, v_difference, 'refund', COALESCE(p_description, 'Reservation adjustment'), v_request_id);
+  ELSIF v_difference < 0 THEN
+    -- Charge additional amount (rare case, should not happen with proper estimates)
+    INSERT INTO credits (user_id, amount, type, description, request_id)
+    VALUES (v_user_id, v_difference, 'usage', COALESCE(p_description, 'Reservation adjustment'), v_request_id);
+  END IF;
+
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql;
 
 -- Default config values
 INSERT INTO config (key, value) VALUES

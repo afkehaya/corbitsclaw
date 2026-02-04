@@ -28,6 +28,7 @@ This project uses the multi-agent development workflow for parallel execution.
 ### File Ownership
 
 When parallel agents are running:
+
 - `src/api/`, `src/models/`, `src/services/` → backend-agent
 - `src/components/`, `src/pages/`, `src/styles/` → frontend-agent
 - `tests/`, `__tests__/` → qa-agent
@@ -38,6 +39,7 @@ If you need to modify a file outside your domain, check `.worktrees/.scratchpad/
 ### Communication
 
 Agents communicate via scratchpad files:
+
 ```
 .worktrees/.scratchpad/
 ├─ backend-agent.md
@@ -51,6 +53,7 @@ Before starting work, read relevant scratchpads to understand current state.
 ### Quality Gates
 
 Before marking a task complete:
+
 - [ ] Code compiles/runs without errors
 - [ ] Basic manual testing passes
 - [ ] No linting errors
@@ -67,6 +70,7 @@ Before marking a task complete:
 ## Task System
 
 This project uses Claude's native Task system:
+
 - Tasks have dependencies (blockedBy)
 - Parallel tasks run simultaneously via background agents
 - Progress tracked via TaskList / TaskUpdate

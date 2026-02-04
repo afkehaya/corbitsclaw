@@ -16,7 +16,6 @@ import type { Context } from 'hono';
 
 import { AuthError, InsufficientBalanceError } from '../lib/errors.js';
 import type { User } from '../services/auth.js';
-import type { CorbitsEndpoint } from '@openclawd/shared';
 
 // =============================================================================
 // Test Fixtures
@@ -24,9 +23,9 @@ import type { CorbitsEndpoint } from '@openclawd/shared';
 
 // API keys for testing (the actual keys users would use)
 const TEST_API_KEYS = {
-  validUser: 'oc_validapikey12345678901234567',
-  zeroBalanceUser: 'oc_zerobalancekey1234567890123',
-  richUser: 'oc_richuserkey123456789012345678',
+  validUser: 'cc_validapikey12345678901234567',
+  zeroBalanceUser: 'cc_zerobalancekey1234567890123',
+  richUser: 'cc_richuserkey123456789012345678',
 };
 
 const TEST_USERS = {
@@ -34,7 +33,7 @@ const TEST_USERS = {
     id: 'user-123',
     email: 'test@example.com',
     api_key_hash: 'mock_hash_validUser', // Mock hash - in tests we bypass bcrypt
-    api_key_prefix: 'oc_validapi...',
+    api_key_prefix: 'cc_validapi...',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -42,7 +41,7 @@ const TEST_USERS = {
     id: 'user-zero-balance',
     email: 'zero@example.com',
     api_key_hash: 'mock_hash_zeroBalanceUser',
-    api_key_prefix: 'oc_zerobalance...',
+    api_key_prefix: 'cc_zerobalance...',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -50,7 +49,7 @@ const TEST_USERS = {
     id: 'user-rich',
     email: 'rich@example.com',
     api_key_hash: 'mock_hash_richUser',
-    api_key_prefix: 'oc_richuser...',
+    api_key_prefix: 'cc_richuser...',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -62,7 +61,7 @@ interface TestState {
   transactions: Array<{
     userId: string;
     requestId: string;
-    endpoint: CorbitsEndpoint;
+    endpoint: string;
     path: string;
     costX402: number;
     costMargin: number;
@@ -148,7 +147,7 @@ function createTestApp(
     }
 
     const token = parts[1];
-    if (!token || !token.startsWith('oc_')) {
+    if (!token || !token.startsWith('cc_')) {
       throw new AuthError('Invalid API key');
     }
 
@@ -194,7 +193,7 @@ function createTestApp(
   const mockRecordTransaction = async (input: {
     userId: string;
     requestId: string;
-    endpoint: CorbitsEndpoint;
+    endpoint: string;
     path: string;
     costX402: number;
     costMargin: number;
@@ -232,7 +231,7 @@ function createTestApp(
   // Gateway handler implementation
   const handleGatewayRequest = async (
     c: Context,
-    endpoint: CorbitsEndpoint,
+    endpoint: string,
     path: string
   ): Promise<Response> => {
     const MIN_BALANCE_THRESHOLD = 0.01;

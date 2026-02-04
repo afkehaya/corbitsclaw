@@ -3,7 +3,7 @@
  * Thrown when a user fails to authenticate or has invalid credentials.
  */
 export class AuthError extends Error {
-  override readonly name = "AuthError" as const;
+  override readonly name = 'AuthError' as const;
 
   constructor(message: string) {
     super(message);
@@ -16,7 +16,7 @@ export class AuthError extends Error {
  * Thrown when a user attempts an operation requiring more funds than available.
  */
 export class InsufficientBalanceError extends Error {
-  override readonly name = "InsufficientBalanceError" as const;
+  override readonly name = 'InsufficientBalanceError' as const;
 
   constructor(message: string) {
     super(message);
@@ -29,7 +29,7 @@ export class InsufficientBalanceError extends Error {
  * Thrown when request validation fails or required parameters are missing.
  */
 export class InvalidRequestError extends Error {
-  override readonly name = "InvalidRequestError" as const;
+  override readonly name = 'InvalidRequestError' as const;
 
   constructor(message: string) {
     super(message);
@@ -42,7 +42,7 @@ export class InvalidRequestError extends Error {
  * Thrown when a user does not have permission to access a resource.
  */
 export class ForbiddenError extends Error {
-  override readonly name = "ForbiddenError" as const;
+  override readonly name = 'ForbiddenError' as const;
 
   constructor(message: string) {
     super(message);

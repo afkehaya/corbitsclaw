@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
-import type { Transaction, CorbitsEndpoint } from '@openclawd/shared';
+import type { Transaction } from '@corbitsclaw/shared';
 
 import { getSupabaseClient } from '../lib/supabase.js';
 import { InvalidRequestError } from '../lib/errors.js';
@@ -206,7 +206,7 @@ adminRoutes.get('/transactions', async (c: Context) => {
     id: row.id,
     userId: row.user_id,
     requestId: row.request_id,
-    endpoint: row.endpoint as CorbitsEndpoint,
+    endpoint: row.endpoint,
     path: row.path,
     costX402: Number(row.cost_x402),
     costMargin: Number(row.cost_margin),

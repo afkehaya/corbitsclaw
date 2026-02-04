@@ -1,5 +1,83 @@
 # Backend Agent Status
 
+## Task: [REL-1] Fix silent failure on usage recording
+
+### Status: COMPLETE
+
+### Summary
+
+Fixed the silent failure bug in `apps/api/src/routes/gateway.ts` where usage recording failures were being swallowed, allowing potentially free API usage.
+
+### Problem
+
+The original code in the catch block around lines 222-226 logged the error but allowed the request to succeed:
+
+```typescript
+} catch (error) {
+  console.error(`[${requestId}] Failed to record usage:`, error);
+  // Don't fail the request if usage recording fails
+  // The user already got charged by x402, we just missed recording it
+}
+```
+
+This was problematic because if usage recording failed, the cost wasn't tracked, potentially allowing untracked/free usage.
+
+### Solution
+
+Changed the catch block to return a 500 error response when usage recording fails:
+
+```typescript
+} catch (error) {
+  console.error(`[${requestId}] Failed to record usage:`, error);
+  // CRITICAL: Fail the request if usage recording fails.
+  // The x402 payment has already been made, but we cannot proceed without
+  // tracking the cost. This ensures we don't allow untracked usage.
+  // TODO: Implement a reconciliation queue to recover failed usage recordings.
+  // This would allow us to retry recording later and potentially refund the
+  // user if the upstream service confirms the payment was received but we
+  // couldn't record it.
+  return c.json(
+    {
+      error: 'Internal server error',
+      message:
+        'Failed to record usage. Please contact support with your request ID.',
+      requestId,
+    },
+    500
+  );
+}
+```
+
+### Trade-offs
+
+- User loses the x402 payment if usage recording fails
+- This incentivizes fixing the recording system
+- Added TODO for future reconciliation queue implementation
+
+### Files Modified
+
+- `apps/api/src/routes/gateway.ts` - Fixed catch block in usage recording section
+
+### Additional Fixes
+
+Also fixed import issues in the file:
+
+- Changed incorrect imports (`reserveBalance`, `cancelReservation`, `adjustReservation`) to correct ones (`hasSufficientBalance`, `recordUsage`, `recordTransaction`)
+- Removed unused import `X402CostMissingError`
+
+### Commit
+
+```
+35eb1a7 fix(gateway): Fail request if usage recording fails [REL-1]
+```
+
+### Build Status
+
+- `pnpm eslint apps/api/src/routes/gateway.ts` passes with no errors
+- Pre-existing lint/TypeScript errors in other files (config.ts, ledger.ts, auth.ts) are unrelated to this fix
+
+---
+
 ## Task: #2 [SETUP] Create shared types package
 
 ### Status: COMPLETE
@@ -75,7 +153,7 @@ ea88e16 feat: Add @openclawd/shared package with types and constants
 ### Files Created
 
 1. **pnpm-workspace.yaml** - Workspace configuration with catalog dependencies
-   - Packages: apps/*, packages/*, scripts/*
+   - Packages: apps/_, packages/_, scripts/\*
    - Catalog with all required dependencies (@eslint/js, hono, typescript, etc.)
    - catalogMode: prefer
    - linkWorkspacePackages: true
@@ -109,7 +187,7 @@ ea88e16 feat: Add @openclawd/shared package with types and constants
    - Ignores node_modules, dist, and JS files
 
 7. **.gitignore** - Git ignore patterns
-   - node_modules/, dist/, .env, .env.local, .eslintcache, *.log, .DS_Store
+   - node_modules/, dist/, .env, .env.local, .eslintcache, \*.log, .DS_Store
 
 8. **CONVENTIONS.md** - Documentation of faremeter conventions
    - Project structure

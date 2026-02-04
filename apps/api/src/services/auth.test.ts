@@ -39,7 +39,7 @@ test('generateApiKey', async (t: Test) => {
     const result = await generateApiKey();
 
     t.ok(
-      result.fullKey.startsWith('oc_'),
+      result.fullKey.startsWith('cc_'),
       'Full key should start with oc_ prefix'
     );
     t.equal(
@@ -53,7 +53,7 @@ test('generateApiKey', async (t: Test) => {
     const result = await generateApiKey();
 
     t.ok(
-      result.visiblePrefix.startsWith('oc_'),
+      result.visiblePrefix.startsWith('cc_'),
       'Visible prefix should start with oc_'
     );
     t.ok(
@@ -87,7 +87,7 @@ test('generateApiKey', async (t: Test) => {
     'contains only alphanumeric characters after prefix',
     async (t: Test) => {
       const result = await generateApiKey();
-      const randomPart = result.fullKey.slice(3); // Remove 'oc_' prefix
+      const randomPart = result.fullKey.slice(3); // Remove 'cc_' prefix
       t.match(
         randomPart,
         /^[a-f0-9]+$/,
@@ -346,7 +346,7 @@ test('verifyMagicLink', async (t: Test) => {
 
       t.ok(result.apiKey, 'Should return an API key for new user');
       t.ok(
-        result.apiKey?.startsWith('oc_'),
+        result.apiKey?.startsWith('cc_'),
         'API key should have correct prefix'
       );
       t.ok(result.apiKeyPrefix, 'Should return a visible prefix');
@@ -371,7 +371,7 @@ test('verifyMagicLink', async (t: Test) => {
 
       const validToken = 'valid-token-456';
       const existingHash = await bcrypt.hash(
-        'oc_existingkey1234567890abcdef',
+        'cc_existingkey1234567890abcdef',
         10
       );
 
@@ -387,7 +387,7 @@ test('verifyMagicLink', async (t: Test) => {
         id: 'user_existing',
         email: 'existing@example.com',
         api_key_hash: existingHash,
-        api_key_prefix: 'oc_existing...',
+        api_key_prefix: 'cc_existing...',
       });
 
       const { verifyMagicLink } = (await t.mockImport('./auth.js', {
@@ -406,7 +406,7 @@ test('verifyMagicLink', async (t: Test) => {
       );
       t.equal(
         result.apiKeyPrefix,
-        'oc_existing...',
+        'cc_existing...',
         'Should return visible prefix'
       );
       t.equal(
@@ -634,9 +634,9 @@ test('validateApiKey', async (t: Test) => {
   await t.test('valid API key returns user', async (t: Test) => {
     users.clear();
 
-    const apiKey = 'oc_validkey1234567890abcdef12345';
+    const apiKey = 'cc_validkey1234567890abcdef12345';
     const hash = await bcrypt.hash(apiKey, 10);
-    const prefix = 'oc_validkey...';
+    const prefix = 'cc_validkey...';
 
     users.set('test@example.com', {
       id: 'user_1',
@@ -670,7 +670,7 @@ test('validateApiKey', async (t: Test) => {
       './email.js': { sendMagicLink: async () => {} },
     })) as typeof import('./auth.js');
 
-    const user = await validateApiKey('oc_invalidkey12345678901234567');
+    const user = await validateApiKey('cc_invalidkey12345678901234567');
 
     t.equal(user, null, 'Should return null for invalid API key');
   });
@@ -732,10 +732,10 @@ test('validateApiKey', async (t: Test) => {
     async (t: Test) => {
       users.clear();
 
-      const realKey = 'oc_realkey01234567890abcdef12345';
-      const fakeKey = 'oc_realkey09999999999999999999'; // Same prefix, different key
+      const realKey = 'cc_realkey01234567890abcdef12345';
+      const fakeKey = 'cc_realkey09999999999999999999'; // Same prefix, different key
       const hash = await bcrypt.hash(realKey, 10);
-      const prefix = 'oc_realkey0...';
+      const prefix = 'cc_realkey0...';
 
       users.set('test@example.com', {
         id: 'user_1',
@@ -824,12 +824,12 @@ test('refreshApiKey', async (t: Test) => {
   await t.test('returns new API key and prefix', async (t: Test) => {
     users.clear();
 
-    const oldHash = await bcrypt.hash('oc_oldkey1234567890abcdef12345', 10);
+    const oldHash = await bcrypt.hash('cc_oldkey1234567890abcdef12345', 10);
     users.set('test@example.com', {
       id: 'user_1',
       email: 'test@example.com',
       api_key_hash: oldHash,
-      api_key_prefix: 'oc_oldkey12...',
+      api_key_prefix: 'cc_oldkey12...',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -845,7 +845,7 @@ test('refreshApiKey', async (t: Test) => {
 
     t.ok(result.apiKey, 'Should return a new API key');
     t.ok(
-      result.apiKey.startsWith('oc_'),
+      result.apiKey.startsWith('cc_'),
       'New API key should have correct prefix'
     );
     t.equal(result.apiKey.length, 35, 'New API key should be 35 characters');
@@ -861,8 +861,8 @@ test('refreshApiKey', async (t: Test) => {
     async (t: Test) => {
       users.clear();
 
-      const oldHash = await bcrypt.hash('oc_oldkey1234567890abcdef12345', 10);
-      const oldPrefix = 'oc_oldkey12...';
+      const oldHash = await bcrypt.hash('cc_oldkey1234567890abcdef12345', 10);
+      const oldPrefix = 'cc_oldkey12...';
       users.set('test@example.com', {
         id: 'user_2',
         email: 'test@example.com',

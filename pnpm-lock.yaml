@@ -9,27 +9,15 @@ catalogs:
     '@eslint/js':
       specifier: 9.34.0
       version: 9.34.0
-    '@faremeter/fetch':
-      specifier: 0.15.0
-      version: 0.15.0
-    '@faremeter/payment-solana':
-      specifier: 0.15.0
+    '@faremeter/rides':
+      specifier: ^0.15.0
       version: 0.15.0
     '@faremeter/types':
-      specifier: 0.15.0
-      version: 0.15.0
-    '@faremeter/wallet-solana':
       specifier: 0.15.0
       version: 0.15.0
     '@hono/node-server':
       specifier: 1.19.1
       version: 1.19.1
-    '@solana/spl-token':
-      specifier: 0.4.13
-      version: 0.4.13
-    '@solana/web3.js':
-      specifier: 1.98.4
-      version: 1.98.4
     '@supabase/supabase-js':
       specifier: 2.45.0
       version: 2.45.0
@@ -42,9 +30,6 @@ catalogs:
     bcryptjs:
       specifier: 3.0.2
       version: 3.0.2
-    bs58:
-      specifier: 4.0.1
-      version: 4.0.1
     eslint:
       specifier: 9.34.0
       version: 9.34.0
@@ -110,39 +95,24 @@ importers:
 
   apps/api:
     dependencies:
-      '@faremeter/fetch':
-        specifier: 'catalog:'
-        version: 0.15.0
-      '@faremeter/payment-solana':
+      '@corbitsclaw/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@faremeter/rides':
         specifier: 'catalog:'
         version: 0.15.0(bufferutil@4.1.0)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(utf-8-validate@5.0.10)(ws@7.5.10(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       '@faremeter/types':
         specifier: 'catalog:'
         version: 0.15.0
-      '@faremeter/wallet-solana':
-        specifier: 'catalog:'
-        version: 0.15.0(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.2)(utf-8-validate@5.0.10)
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.1(hono@4.9.0)
-      '@openclawd/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
-      '@solana/spl-token':
-        specifier: 'catalog:'
-        version: 0.4.13(@solana/web3.js@1.98.4(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.2)(utf-8-validate@5.0.10))(bufferutil@4.1.0)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(utf-8-validate@5.0.10)
-      '@solana/web3.js':
-        specifier: 'catalog:'
-        version: 1.98.4(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.2)(utf-8-validate@5.0.10)
       '@supabase/supabase-js':
         specifier: 'catalog:'
         version: 2.45.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       bcryptjs:
         specifier: 'catalog:'
         version: 3.0.2
-      bs58:
-        specifier: 'catalog:'
-        version: 4.0.1
       hono:
         specifier: 'catalog:'
         version: 4.9.0
@@ -188,6 +158,12 @@ importers:
         version: 5.9.2
 
 packages:
+  '@adraffy/ens-normalize@1.11.1':
+    resolution:
+      {
+        integrity: sha512-nhCBV3quEgesuf7c7KYfperqSS14T8bYuvJ8PcLJp6znkZpFc0AuW4qBtr8eKVyPPe/8RSr7sglCWPU5eaxwKQ==,
+      }
+
   '@alcalzone/ansi-tokenize@0.1.3':
     resolution:
       {
@@ -545,16 +521,34 @@ packages:
         integrity: sha512-ftI3w0jHXXh77jZZvSlz8bxmEZvT+bajFSWvrfXHWrzLMCGmSUMXAuPAwL2r6my9KKpz6dfFtI7wzWPp5GHT0A==,
       }
 
+  '@faremeter/payment-evm@0.15.0':
+    resolution:
+      {
+        integrity: sha512-xsdt9gVcOQXqoTgloR3MEMx0CVYWhHPRJR4NRIZAPqtT/jhLYYbtkq7swobDMYTM85jLiQuyw/FUaY52Gma6Dg==,
+      }
+
   '@faremeter/payment-solana@0.15.0':
     resolution:
       {
         integrity: sha512-d9VgIm7UgQtM7UIAeFZA8DeGBQGf6DWcEQK4kMJb5xQueL9m1leGxO6FGi8h2zTn4ASaP97PCuisRpZVrAC+KA==,
       }
 
+  '@faremeter/rides@0.15.0':
+    resolution:
+      {
+        integrity: sha512-wHBNK/ctfTQGXkmgtF4b4/XuVwQ6vRZ4/vefv8sqJFv9R9oUcLMxjfLjzWohANMSQMPdXiLmco/d9MH4+FsL2w==,
+      }
+
   '@faremeter/types@0.15.0':
     resolution:
       {
         integrity: sha512-fqtXKLwdglqJf3AIdyp2dLEM2a2IctBmnaaVV4Qn5ovEcN8zNh93FvPf0Rv2PhmmpnGV+xIVqV100I0VNoGc7A==,
+      }
+
+  '@faremeter/wallet-evm@0.15.0':
+    resolution:
+      {
+        integrity: sha512-Q5XVFmWsDy1gVdjr5c2gGYk7czQ0cQkMtpBqWAT+f8IvMi5zxdcJHz7NrnZDJRxbs27W/XMTXsGWvT9jikfzVw==,
       }
 
   '@faremeter/wallet-solana@0.15.0':
@@ -676,6 +670,20 @@ packages:
         integrity: sha512-YvNVrXIxVpnY528zoiEjX8PqTfr0UCtKXyssvaWL8AE+OByFTCooKuKMdPlm6g65YUI9fPXrHn4UnogSskABnA==,
       }
 
+  '@noble/ciphers@1.3.0':
+    resolution:
+      {
+        integrity: sha512-2I0gnIVPtfnMw9ee9h1dJG7tp81+8Ob3OJb3Mv37rx5L40/b0i7djjCVvGOVqc9AEIQyvyu1i6ypKdFw8R8gQw==,
+      }
+    engines: { node: ^14.21.3 || >=16 }
+
+  '@noble/curves@1.9.1':
+    resolution:
+      {
+        integrity: sha512-k11yZxZg+t+gWvBbIswW0yoJlu8cHOC7dhunwOzoWH/mXGBiYyR4YY6hAEK/3EUs4UpB8la1RfdRpeGsFHkWsA==,
+      }
+    engines: { node: ^14.21.3 || >=16 }
+
   '@noble/curves@1.9.7':
     resolution:
       {
@@ -781,6 +789,24 @@ packages:
         integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==,
       }
     engines: { node: '>=14' }
+
+  '@scure/base@1.2.6':
+    resolution:
+      {
+        integrity: sha512-g/nm5FgUa//MCj1gV09zTJTaM6KBAHqLN907YVQqf7zC49+DcO4B1so4ZX07Ef10Twr6nuqYEH9GEggFXA4Fmg==,
+      }
+
+  '@scure/bip32@1.7.0':
+    resolution:
+      {
+        integrity: sha512-E4FFX/N3f4B80AKWp5dP6ow+flD1LQZo/w8UnLGYZO674jS6YnYeepycOOksv+vLPSpgN35wgKgy+ybfTb2SMw==,
+      }
+
+  '@scure/bip39@1.6.0':
+    resolution:
+      {
+        integrity: sha512-+lF0BbLiJNwVlev4eKelw1WWLaiKXw7sSl8T6FvBlWkdX+94aGJ4o8XjUdlyhTCjd8c+B3KT3JfS8P0bLRNU6A==,
+      }
 
   '@sigstore/bundle@2.3.2':
     resolution:
@@ -2014,6 +2040,20 @@ packages:
       }
     engines: { node: ^14.17.0 || ^16.13.0 || >=18.0.0 }
 
+  abitype@1.1.0:
+    resolution:
+      {
+        integrity: sha512-6Vh4HcRxNMLA0puzPjM5GBgT4aAcFGKZzSgAXvuZ27shJP6NEpielTuqbBmZILR5/xd0PizkBGy5hReKz9jl5A==,
+      }
+    peerDependencies:
+      typescript: '>=5.0.4'
+      zod: ^3.22.0 || ^4.0.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+      zod:
+        optional: true
+
   acorn-jsx@5.3.2:
     resolution:
       {
@@ -2663,6 +2703,12 @@ packages:
       }
     engines: { node: '>=0.10.0' }
 
+  eventemitter3@5.0.1:
+    resolution:
+      {
+        integrity: sha512-GWkBvjiSZK87ELrYOSESUYeVIc9mvLLf/nXalMOS5dYrgZq9o5OVkbZAVM06CVxYsCwH9BDZFPlQTlPA1j4ahA==,
+      }
+
   eventemitter3@5.0.4:
     resolution:
       {
@@ -3171,6 +3217,14 @@ packages:
     peerDependencies:
       ws: '*'
 
+  isows@1.0.7:
+    resolution:
+      {
+        integrity: sha512-I1fSfDCZL5P0v33sVqeTDSpcstAg/N+wF5HS033mogOVIp4B+oHC7oOCsA3axAbBSGTJ8QubbNmnIRN/h8U7hg==,
+      }
+    peerDependencies:
+      ws: '*'
+
   istanbul-lib-coverage@3.2.2:
     resolution:
       {
@@ -3614,6 +3668,17 @@ packages:
         integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==,
       }
     engines: { node: '>= 0.8.0' }
+
+  ox@0.9.6:
+    resolution:
+      {
+        integrity: sha512-8SuCbHPvv2eZLYXrNmC0EC12rdzXQLdhnOMlHDW2wiCPLxBrOOJwX5L5E61by+UjTPOryqQiRSnjIKCI+GykKg==,
+      }
+    peerDependencies:
+      typescript: '>=5.4.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   p-limit@3.1.0:
     resolution:
@@ -4395,6 +4460,17 @@ packages:
       }
     engines: { node: ^14.17.0 || ^16.13.0 || >=18.0.0 }
 
+  viem@2.41.2:
+    resolution:
+      {
+        integrity: sha512-LYliajglBe1FU6+EH9mSWozp+gRA/QcHfxeD9Odf83AdH5fwUS7DroH4gHvlv6Sshqi1uXrYFA2B/EOczxd15g==,
+      }
+    peerDependencies:
+      typescript: '>=5.0.4'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   walk-up-path@4.0.0:
     resolution:
       {
@@ -4480,6 +4556,21 @@ packages:
       utf-8-validate:
         optional: true
 
+  ws@8.18.3:
+    resolution:
+      {
+        integrity: sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg==,
+      }
+    engines: { node: '>=10.0.0' }
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
   ws@8.19.0:
     resolution:
       {
@@ -4553,6 +4644,8 @@ packages:
       }
 
 snapshots:
+  '@adraffy/ens-normalize@1.11.1': {}
+
   '@alcalzone/ansi-tokenize@0.1.3':
     dependencies:
       ansi-styles: 6.2.3
@@ -4706,6 +4799,18 @@ snapshots:
       '@faremeter/types': 0.15.0
       arktype: 2.1.21
 
+  '@faremeter/payment-evm@0.15.0(bufferutil@4.1.0)(typescript@5.9.2)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@faremeter/info': 0.15.0
+      '@faremeter/types': 0.15.0
+      arktype: 2.1.21
+      viem: 2.41.2(bufferutil@4.1.0)(typescript@5.9.2)(utf-8-validate@5.0.10)
+    transitivePeerDependencies:
+      - bufferutil
+      - typescript
+      - utf-8-validate
+      - zod
+
   '@faremeter/payment-solana@0.15.0(bufferutil@4.1.0)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(utf-8-validate@5.0.10)(ws@7.5.10(bufferutil@4.1.0)(utf-8-validate@5.0.10))':
     dependencies:
       '@faremeter/info': 0.15.0
@@ -4731,9 +4836,42 @@ snapshots:
       - utf-8-validate
       - ws
 
+  '@faremeter/rides@0.15.0(bufferutil@4.1.0)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(utf-8-validate@5.0.10)(ws@7.5.10(bufferutil@4.1.0)(utf-8-validate@5.0.10))':
+    dependencies:
+      '@faremeter/fetch': 0.15.0
+      '@faremeter/info': 0.15.0
+      '@faremeter/payment-evm': 0.15.0(bufferutil@4.1.0)(typescript@5.9.2)(utf-8-validate@5.0.10)
+      '@faremeter/payment-solana': 0.15.0(bufferutil@4.1.0)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(utf-8-validate@5.0.10)(ws@7.5.10(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+      '@faremeter/types': 0.15.0
+      '@faremeter/wallet-evm': 0.15.0(bufferutil@4.1.0)(typescript@5.9.2)(utf-8-validate@5.0.10)
+      '@faremeter/wallet-solana': 0.15.0(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.2)(utf-8-validate@5.0.10)
+      '@logtape/logtape': 1.0.4
+      '@solana/kit': 2.3.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.2)(ws@7.5.10(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+      '@solana/web3.js': 1.98.4(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.2)(utf-8-validate@5.0.10)
+      arktype: 2.1.21
+      viem: 2.41.2(bufferutil@4.1.0)(typescript@5.9.2)(utf-8-validate@5.0.10)
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - fastestsmallesttextencoderdecoder
+      - typescript
+      - utf-8-validate
+      - ws
+      - zod
+
   '@faremeter/types@0.15.0':
     dependencies:
       arktype: 2.1.21
+
+  '@faremeter/wallet-evm@0.15.0(bufferutil@4.1.0)(typescript@5.9.2)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@faremeter/types': 0.15.0
+      viem: 2.41.2(bufferutil@4.1.0)(typescript@5.9.2)(utf-8-validate@5.0.10)
+    transitivePeerDependencies:
+      - bufferutil
+      - typescript
+      - utf-8-validate
+      - zod
 
   '@faremeter/wallet-solana@0.15.0(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.2)(utf-8-validate@5.0.10)':
     dependencies:
@@ -4824,6 +4962,12 @@ snapshots:
 
   '@logtape/logtape@1.0.4': {}
 
+  '@noble/ciphers@1.3.0': {}
+
+  '@noble/curves@1.9.1':
+    dependencies:
+      '@noble/hashes': 1.8.0
+
   '@noble/curves@1.9.7':
     dependencies:
       '@noble/hashes': 1.8.0
@@ -4909,6 +5053,19 @@ snapshots:
 
   '@pkgjs/parseargs@0.11.0':
     optional: true
+
+  '@scure/base@1.2.6': {}
+
+  '@scure/bip32@1.7.0':
+    dependencies:
+      '@noble/curves': 1.9.7
+      '@noble/hashes': 1.8.0
+      '@scure/base': 1.2.6
+
+  '@scure/bip39@1.6.0':
+    dependencies:
+      '@noble/hashes': 1.8.0
+      '@scure/base': 1.2.6
 
   '@sigstore/bundle@2.3.2':
     dependencies:
@@ -6119,6 +6276,10 @@ snapshots:
 
   abbrev@2.0.0: {}
 
+  abitype@1.1.0(typescript@5.9.2):
+    optionalDependencies:
+      typescript: 5.9.2
+
   acorn-jsx@5.3.2(acorn@8.15.0):
     dependencies:
       acorn: 8.15.0
@@ -6510,6 +6671,8 @@ snapshots:
 
   esutils@2.0.3: {}
 
+  eventemitter3@5.0.1: {}
+
   eventemitter3@5.0.4: {}
 
   events-to-array@2.0.3: {}
@@ -6783,6 +6946,10 @@ snapshots:
     dependencies:
       ws: 7.5.10(bufferutil@4.1.0)(utf-8-validate@5.0.10)
 
+  isows@1.0.7(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)):
+    dependencies:
+      ws: 8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+
   istanbul-lib-coverage@3.2.2: {}
 
   istanbul-lib-report@3.0.1:
@@ -7055,6 +7222,21 @@ snapshots:
       prelude-ls: 1.2.1
       type-check: 0.4.0
       word-wrap: 1.2.5
+
+  ox@0.9.6(typescript@5.9.2):
+    dependencies:
+      '@adraffy/ens-normalize': 1.11.1
+      '@noble/ciphers': 1.3.0
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.1.0(typescript@5.9.2)
+      eventemitter3: 5.0.1
+    optionalDependencies:
+      typescript: 5.9.2
+    transitivePeerDependencies:
+      - zod
 
   p-limit@3.1.0:
     dependencies:
@@ -7566,6 +7748,23 @@ snapshots:
 
   validate-npm-package-name@5.0.1: {}
 
+  viem@2.41.2(bufferutil@4.1.0)(typescript@5.9.2)(utf-8-validate@5.0.10):
+    dependencies:
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.1.0(typescript@5.9.2)
+      isows: 1.0.7(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+      ox: 0.9.6(typescript@5.9.2)
+      ws: 8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+    optionalDependencies:
+      typescript: 5.9.2
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+      - zod
+
   walk-up-path@4.0.0: {}
 
   webidl-conversions@3.0.1: {}
@@ -7608,6 +7807,11 @@ snapshots:
       strip-ansi: 7.1.2
 
   ws@7.5.10(bufferutil@4.1.0)(utf-8-validate@5.0.10):
+    optionalDependencies:
+      bufferutil: 4.1.0
+      utf-8-validate: 5.0.10
+
+  ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10):
     optionalDependencies:
       bufferutil: 4.1.0
       utf-8-validate: 5.0.10

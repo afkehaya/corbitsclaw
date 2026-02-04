@@ -17,12 +17,12 @@ async function sendEmail(options: {
   html: string;
   text: string;
 }): Promise<void> {
-  const apiKey = getEnvVar("RESEND_API_KEY");
+  const apiKey = getEnvVar('RESEND_API_KEY');
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
@@ -47,27 +47,31 @@ async function sendEmail(options: {
  * @param email - The recipient's email address
  * @param token - The magic link token
  */
-export async function sendMagicLink(email: string, token: string): Promise<void> {
-  const baseUrl = process.env.APP_URL ?? "http://localhost:3000";
+export async function sendMagicLink(
+  email: string,
+  token: string
+): Promise<void> {
+  const baseUrl = process.env.APP_URL ?? 'http://localhost:3000';
   const magicLinkUrl = `${baseUrl}/auth/verify?token=${encodeURIComponent(token)}`;
-  const fromEmail = process.env.EMAIL_FROM ?? "OpenClawd <noreply@openclaw.ai>";
+  const fromEmail =
+    process.env.EMAIL_FROM ?? 'CorbitsClaw <noreply@clawdmeter.vercel.app>';
 
   await sendEmail({
     from: fromEmail,
     to: email,
-    subject: "Sign in to OpenClawd",
-    text: `Sign in to OpenClawd\n\nClick the link below to sign in. This link will expire in 15 minutes.\n\n${magicLinkUrl}\n\nIf you didn't request this email, you can safely ignore it.`,
+    subject: 'Sign in to CorbitsClaw',
+    text: `Sign in to CorbitsClaw\n\nClick the link below to sign in. This link will expire in 15 minutes.\n\n${magicLinkUrl}\n\nIf you didn't request this email, you can safely ignore it.`,
     html: `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign in to OpenClawd</title>
+  <title>Sign in to CorbitsClaw</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px;">
   <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-    <h1 style="color: #1a1a1a; font-size: 24px; margin: 0 0 20px 0;">Sign in to OpenClawd</h1>
+    <h1 style="color: #1a1a1a; font-size: 24px; margin: 0 0 20px 0;">Sign in to CorbitsClaw</h1>
     <p style="color: #4a4a4a; font-size: 16px; line-height: 1.5; margin: 0 0 30px 0;">
       Click the button below to sign in. This link will expire in 15 minutes.
     </p>

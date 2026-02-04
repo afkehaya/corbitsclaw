@@ -1,530 +1,358 @@
 # Technical Specification
 
-## OpenClawd - Agentic Commerce Skill for Claude Code
+## CorbitsClaw - Refactor from OpenClawd
+
+Generated from `docs/PRD.md` sections 10-12.
 
 ---
 
 ## Tech Stack
 
-| Layer                 | Technology                                | Rationale                                      |
-| --------------------- | ----------------------------------------- | ---------------------------------------------- |
-| **Skill Runtime**     | Claude Code Skill (Markdown + TypeScript) | Native integration, embedded docs              |
-| **Backend Framework** | Hono on Vercel Edge                       | Fast, TypeScript-native, @faremeter compatible |
-| **Database**          | Supabase (PostgreSQL)                     | Managed, real-time, good free tier             |
-| **Auth**              | Magic Link (custom)                       | Passwordless, simple UX                        |
-| **Payments**          | Stripe Checkout                           | PCI compliant, webhooks                        |
-| **Blockchain**        | Solana (USDC)                             | Low fees, @faremeter/wallet-solana             |
-| **x402 Protocol**     | @faremeter/\* packages                    | Required per conventions                       |
-| **Package Manager**   | pnpm 10.12.1+                             | Catalog versioning per faremeter               |
-| **Build**             | TypeScript + Makefile                     | Strict mode, faremeter conventions             |
-| **Testing**           | tap (node-tap)                            | Faremeter standard                             |
+| Layer     | Technology                        | Rationale                                               |
+| --------- | --------------------------------- | ------------------------------------------------------- |
+| Backend   | Hono + Vercel Edge Functions      | Already in use, performant edge runtime                 |
+| Database  | Supabase (PostgreSQL)             | Already in use, managed hosting                         |
+| Payments  | Stripe Checkout + Webhooks        | Already in use, PCI compliant                           |
+| x402      | `@faremeter/rides`                | Single package replaces 3 faremeter + 3 solana packages |
+| Discovery | Corbits Discovery API             | Dynamic proxy resolution, no hardcoded endpoints        |
+| Email     | Resend (via fetch)                | Already in use for magic links                          |
+| Skills    | Markdown-based Claude Code skills | Already in use                                          |
+| Build     | pnpm monorepo + Makefile          | Faremeter conventions                                   |
 
 ---
 
-## Architecture
+## Architecture Changes
+
+### Current State (OpenClawd)
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Claude Code Terminal                          │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  OpenClawd Skill (.claude/skills/openclawd/)              │  │
-│  │                                                           │  │
-│  │  skill.md ──────────────────────────────────────────────┐ │  │
-│  │  │ Commands: setup, balance, topup, usage, call         │ │  │
-│  │  │ Embedded endpoint docs (xai.md, openai.md, etc.)     │ │  │
-│  │  └──────────────────────────────────────────────────────┘ │  │
-│  │                                                           │  │
-│  │  ~/.openclawd/config.json                                 │  │
-│  │  { "apiKey": "oc_...", "email": "user@..." }             │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │ HTTPS
-                               ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                    API Server (Vercel Edge)                       │
-│                    apps/api/ - Hono Framework                     │
-│                                                                   │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │                      Routes (src/routes/)                   │  │
-│  │                                                             │  │
-│  │  auth.ts           credits.ts        gateway.ts   admin.ts  │  │
-│  │  ─────────         ────────────      ──────────   ───────── │  │
-│  │  POST /auth/       GET /balance      POST /api/*  GET /admin│  │
-│  │    send-link       POST /topup       - xai/*      POST /admin│  │
-│  │  GET /auth/        GET /usage        - openai/*     /config │  │
-│  │    verify          POST /webhook     - amazon/*     /users  │  │
-│  │  POST /auth/                                        /metrics│  │
-│  │    refresh                                                  │  │
-│  └────────────────────────────────────────────────────────────┘  │
-│                               │                                   │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │                    Services (src/services/)                 │  │
-│  │                                                             │  │
-│  │  ledger.ts              wallet.ts            stripe.ts      │  │
-│  │  ──────────             ──────────           ──────────     │  │
-│  │  getBalance()           initWallet()         createSession()│  │
-│  │  recordDeposit()        makeX402Request()    handleWebhook()│  │
-│  │  recordUsage()          getWalletBalance()   calculateFees()│  │
-│  │  getUsageHistory()                                          │  │
-│  └────────────────────────────────────────────────────────────┘  │
-│                               │                                   │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │                    Middleware (src/middleware/)             │  │
-│  │                                                             │  │
-│  │  auth.ts - Validate API key, attach user to context         │  │
-│  │  ratelimit.ts - Basic rate limiting (future)                │  │
-│  └────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │
-          ┌────────────────────┼────────────────────┐
-          │                    │                    │
-          ▼                    ▼                    ▼
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐
-│    Supabase     │  │     Stripe      │  │   Corbits Network   │
-│                 │  │                 │  │                     │
-│  users          │  │  Checkout       │  │  xai.alez-848f79.   │
-│  credits        │  │  Sessions       │  │    api.corbits.dev  │
-│  transactions   │  │  Webhooks       │  │                     │
-│                 │  │                 │  │  open-ai.alez-...   │
-│                 │  │                 │  │                     │
-│                 │  │                 │  │  amazon.alez-...    │
-└─────────────────┘  └─────────────────┘  └─────────────────────┘
+Wallet: 3 faremeter packages + 3 solana packages + dual RPC
+Gateway: 3 hardcoded routes (/gateway/xai/*, /gateway/openai/*, /gateway/amazon/*)
+Types: CorbitsEndpoint = 'xai' | 'openai' | 'amazon'
+Constants: CORBITS_URLS = { xai: '...', openai: '...', amazon: '...' }
+Skill: Embedded endpoint docs, chat model mapping, endpoint-specific commands
+Name: OpenClawd / @openclawd/* / ~/.openclawd/ / api.openclaw.ai
+```
+
+### Target State (CorbitsClaw)
+
+```
+Wallet: @faremeter/rides only (payer.addLocalWallet + payer.fetch)
+Gateway: 1 dynamic route (POST /gateway/:proxy/*)
+Types: endpoint field is plain string (any proxy name)
+Constants: CORBITS_URLS removed, replaced by proxy-resolver.ts with cache
+Skill: Credit management only (setup/balance/topup/usage)
+Discovery: corbits-skill handles /corbits search/list/call
+Name: CorbitsClaw / @corbitsclaw/* / ~/.corbitsclaw/ / clawdmeter.vercel.app
 ```
 
 ---
 
-## Data Models
+## File-Level Change Map
 
-### Supabase Schema
+### Files to MODIFY (rename + logic changes)
 
-```sql
--- Users table
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email TEXT UNIQUE NOT NULL,
-  api_key_hash TEXT NOT NULL,     -- bcrypt hash of the full API key (never store plain text)
-  api_key_prefix TEXT NOT NULL,   -- Visible prefix for identification (e.g., "oc_abc12345...")
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+| File                               | Changes                                                                         |
+| ---------------------------------- | ------------------------------------------------------------------------------- |
+| `packages/shared/package.json`     | Rename @openclawd/shared -> @corbitsclaw/shared                                 |
+| `packages/shared/src/types.ts`     | Remove CorbitsEndpoint union type, make endpoint a string                       |
+| `packages/shared/src/constants.ts` | Remove CORBITS_URLS, keep other constants                                       |
+| `apps/api/package.json`            | Rename @openclawd/api -> @corbitsclaw/api, swap deps                            |
+| `apps/api/src/services/wallet.ts`  | Full rewrite with @faremeter/rides                                              |
+| `apps/api/src/routes/gateway.ts`   | Replace 3 static routes with 1 dynamic route, remove debug routes, fix path bug |
+| `apps/api/src/routes/admin.ts`     | Update CorbitsEndpoint import -> string type                                    |
+| `apps/api/src/services/config.ts`  | Update import from @corbitsclaw/shared                                          |
+| `apps/api/src/services/ledger.ts`  | Update import from @corbitsclaw/shared                                          |
+| `apps/api/src/services/auth.ts`    | Update API key prefix from oc* -> cc*                                           |
+| `apps/api/src/index.ts`            | Remove debug endpoints referencing old wallet                                   |
+| `apps/api/tsconfig.json`           | Update if needed                                                                |
+| `pnpm-workspace.yaml`              | Add @faremeter/rides to catalog, remove old packages                            |
+| `Makefile`                         | Add build and test commands                                                     |
+| `scripts/setup-db.ts`              | Remove CHECK constraint on transactions.endpoint                                |
+| `CLAUDE.md`                        | Rename all references                                                           |
+| `README.md`                        | Rename all references                                                           |
+| `DEPLOYMENT.md`                    | Rename, remove RPC section, update API URL                                      |
+| `vercel.json`                      | No changes needed                                                               |
+| `eslint.config.ts`                 | No changes needed                                                               |
 
--- Index for API key prefix lookups during authentication
-CREATE INDEX idx_users_api_key_prefix ON users(api_key_prefix);
+### Files to CREATE
 
--- Credits ledger (append-only for audit trail)
-CREATE TABLE credits (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) NOT NULL,
-  amount DECIMAL(12,6) NOT NULL,  -- Positive = deposit, negative = usage
-  type TEXT NOT NULL,  -- 'deposit' | 'usage' | 'refund'
-  description TEXT,
-  stripe_session_id TEXT,  -- For deposits
-  request_id TEXT,  -- For usage (links to transactions)
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+| File                                      | Purpose                                           |
+| ----------------------------------------- | ------------------------------------------------- |
+| `apps/api/src/services/proxy-resolver.ts` | Corbits Discovery API client with in-memory cache |
+| `.claude/skills/corbits/SKILL.md`         | Copy from corbits-skill/SKILL.md                  |
+| `.claude/skills/corbits/VERSION`          | Copy from corbits-skill/VERSION                   |
 
--- Transaction log (API call records with cost breakdown)
-CREATE TABLE transactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) NOT NULL,
-  request_id TEXT UNIQUE NOT NULL,  -- For idempotency
-  endpoint TEXT NOT NULL,  -- 'xai' | 'openai' | 'amazon'
-  path TEXT NOT NULL,  -- Full request path
-  cost_x402 DECIMAL(12,6) NOT NULL,  -- What Corbits charged us (from x402 response)
-  cost_margin DECIMAL(12,6) NOT NULL,  -- Our margin (cost_x402 * margin_percent)
-  cost_total DECIMAL(12,6) NOT NULL,  -- What we charged user (cost_x402 + cost_margin)
-  margin_percent DECIMAL(5,2) NOT NULL,  -- Margin % at time of transaction (for audit)
-  response_status INTEGER,
-  response_time_ms INTEGER,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+### Files to DELETE
 
--- Admin config (key-value store for settings)
-CREATE TABLE config (
-  key TEXT PRIMARY KEY,
-  value JSONB NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_by TEXT  -- Admin identifier
-);
+| File                                              | Reason                            |
+| ------------------------------------------------- | --------------------------------- |
+| `.claude/skills/openclawd/endpoints/xai.md`       | No longer embedding endpoint docs |
+| `.claude/skills/openclawd/endpoints/openai.md`    | No longer embedding endpoint docs |
+| `.claude/skills/openclawd/endpoints/crossmint.md` | No longer embedding endpoint docs |
+| `apps/api/src/types/bs58.d.ts`                    | bs58 package being removed        |
 
--- Default config values
-INSERT INTO config (key, value) VALUES
-  ('margin_global', '{"percent": 30}'),
-  ('margin_xai', '{"percent": null}'),      -- null = use global
-  ('margin_openai', '{"percent": null}'),   -- null = use global
-  ('margin_amazon', '{"percent": null}'),   -- null = use global
-  ('admin_password_hash', '{"hash": null}');  -- Set on first admin setup
+### Files/Directories to RENAME (move)
 
--- Magic link tokens (short-lived)
-CREATE TABLE magic_links (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email TEXT NOT NULL,
-  token TEXT UNIQUE NOT NULL,
-  expires_at TIMESTAMPTZ NOT NULL,
-  used_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+| From                            | To                                |
+| ------------------------------- | --------------------------------- |
+| `.claude/skills/openclawd/`     | `.claude/skills/corbitsclaw/`     |
+| `.claude/commands/openclawd.md` | `.claude/commands/corbitsclaw.md` |
 
--- Indexes
-CREATE INDEX idx_credits_user_id ON credits(user_id);
-CREATE INDEX idx_transactions_user_id ON transactions(user_id);
-CREATE INDEX idx_transactions_created_at ON transactions(created_at);
-CREATE INDEX idx_magic_links_token ON magic_links(token);
-CREATE INDEX idx_magic_links_email ON magic_links(email);
+---
 
--- Helper function: Get user balance
-CREATE OR REPLACE FUNCTION get_user_balance(p_user_id UUID)
-RETURNS DECIMAL AS $$
-  SELECT COALESCE(SUM(amount), 0)
-  FROM credits
-  WHERE user_id = p_user_id;
-$$ LANGUAGE SQL STABLE;
-```
-
-### TypeScript Types (packages/shared/src/types.ts)
+## New Service: proxy-resolver.ts
 
 ```typescript
-// User
-export type User = {
-  id: string;
-  email: string;
-  apiKeyHash: string; // bcrypt hash of the full API key
-  apiKeyPrefix: string; // Visible prefix for identification (e.g., "oc_abc12345...")
-  createdAt: Date;
-};
+// apps/api/src/services/proxy-resolver.ts
+//
+// Resolves Corbits proxy names to URLs using the Discovery API.
+// Caches results in memory with a 5-minute TTL.
+//
+// Discovery API: https://api.corbits.dev/api/v1/search?q=<name>
+//
+// Cache entry: { url: string, timestamp: number }
+// Cache TTL: 5 minutes (300_000 ms)
+//
+// Exports:
+//   resolveProxy(name: string): Promise<string>  -- returns proxy URL
+//   clearProxyCache(): void                       -- clears cache (for admin use)
+//
+// Error cases:
+//   - Proxy not found: throw Error("Unknown proxy: <name>")
+//   - Discovery API unreachable: throw Error("Proxy resolution failed: <reason>")
+```
 
-// Credit entry
-export type CreditEntry = {
-  id: string;
-  userId: string;
-  amount: number;
-  type: 'deposit' | 'usage' | 'refund';
-  description?: string;
-  stripeSessionId?: string;
-  requestId?: string;
-  createdAt: Date;
-};
+---
 
-// Transaction
-export type Transaction = {
-  id: string;
-  userId: string;
-  requestId: string;
-  endpoint: 'xai' | 'openai' | 'amazon';
-  path: string;
-  costUsd: number;
-  costActual: number;
-  responseStatus?: number;
-  responseTimeMs?: number;
-  createdAt: Date;
-};
+## Wallet Service Rewrite: wallet.ts
 
-// API Responses
-export type BalanceResponse = {
-  balance: number; // USD
-  currency: 'USD';
-};
+### Current exports to preserve (interface compatibility)
 
-export type UsageResponse = {
-  transactions: Transaction[];
-  total: number;
-  period: { start: Date; end: Date };
-};
+```typescript
+export interface X402RequestResult<T = unknown> {
+  data: T;
+  response: Response;
+  costPaid: string;
+}
 
-// Corbits Endpoints
+export interface X402RequestOptions {
+  allowZeroCost?: boolean;
+}
+
+export class X402CostMissingError extends Error { ... }
+
+export function initWallet(): Promise<void>
+export function isWalletInitialized(): boolean
+export function makeX402Request<T>(endpoint, path, body?, method?, options?): Promise<X402RequestResult<T>>
+```
+
+### Removed exports
+
+```typescript
+// DELETE - dead code, never imported
+export function getWalletBalance(): Promise<{ amount; decimals; rawAmount }>;
+export function getWalletPublicKey(): string;
+```
+
+---
+
+## Gateway Route Changes
+
+### Current (3 static routes)
+
+```typescript
+gatewayRoutes.post('/xai/*', ...)
+gatewayRoutes.post('/openai/*', ...)
+gatewayRoutes.post('/amazon/*', ...)
+```
+
+### Target (1 dynamic route)
+
+```typescript
+gatewayRoutes.post('/:proxy/*', async (c) => {
+  const proxy = c.req.param('proxy');
+  const path = c.req.path.replace(`/gateway/${proxy}`, '') || '/';
+  const proxyUrl = await resolveProxy(proxy);
+  return handleGatewayRequest(c, proxy, proxyUrl, path);
+});
+```
+
+### handleGatewayRequest signature change
+
+```typescript
+// Current: endpoint is CorbitsEndpoint, URL looked up from CORBITS_URLS
+async function handleGatewayRequest(c, endpoint: CorbitsEndpoint, path: string);
+
+// Target: proxyName is string, proxyUrl passed directly
+async function handleGatewayRequest(
+  c,
+  proxyName: string,
+  proxyUrl: string,
+  path: string
+);
+```
+
+---
+
+## Shared Types Changes
+
+### packages/shared/src/types.ts
+
+```typescript
+// REMOVE
 export type CorbitsEndpoint = 'xai' | 'openai' | 'amazon';
 
-export const CORBITS_URLS: Record<CorbitsEndpoint, string> = {
-  xai: 'https://xai.alez-848f79.api.corbits.dev',
-  openai: 'https://open-ai.alez-848f79.api.corbits.dev',
-  amazon: 'https://amazon.alez-848f79.api.corbits.dev',
-};
+// UPDATE Transaction interface
+export interface Transaction {
+  // endpoint changes from CorbitsEndpoint to string
+  endpoint: string;
+  // everything else stays the same
+}
 
-// Constants
-export const DEFAULT_MARGIN_PERCENT = 30; // Configurable via admin dashboard
+// UPDATE MarginConfig
+export interface MarginConfig {
+  global: number;
+  perEndpoint: Record<string, number>; // was Partial<Record<CorbitsEndpoint, number>>
+}
+```
+
+### packages/shared/src/constants.ts
+
+```typescript
+// REMOVE
+export const CORBITS_URLS: Record<CorbitsEndpoint, string> = { ... };
+
+// KEEP everything else
+export const DEFAULT_MARGIN_PERCENT = 30;
 export const STRIPE_FEE_PERCENT = 0.029;
 export const STRIPE_FEE_FIXED = 0.3;
 export const MIN_TOPUP_USD = 10;
 export const LOW_BALANCE_THRESHOLD = 5;
+export const MAGIC_LINK_EXPIRY_MINUTES = 15;
+export const ADMIN_SESSION_EXPIRY_HOURS = 1;
 
-// Admin config types
-export type MarginConfig = {
-  global: number; // Default margin % (e.g., 30)
-  perEndpoint: Partial<Record<CorbitsEndpoint, number>>; // Optional overrides
-};
-
-export type AdminConfig = {
-  margin: MarginConfig;
-  walletAlertThreshold: number; // Alert if USDC balance below this
-};
+// ADD
+export const CORBITS_DISCOVERY_API = 'https://api.corbits.dev/api/v1';
+export const PROXY_CACHE_TTL_MS = 300_000; // 5 minutes
 ```
 
 ---
 
-## API Design
+## Database Schema Change
 
-### Authentication Routes (`/auth/*`)
-
-```
-POST /auth/send-link
-  Body: { email: string }
-  Response: { success: true, message: "Check your email" }
-  Action: Create magic link token, send email
-
-GET /auth/verify?token=XXX
-  Response: { apiKey: "oc_...", email: "..." }
-  Action: Validate token, create user if new, return API key
-
-POST /auth/refresh
-  Headers: Authorization: Bearer <api_key>
-  Response: { apiKey: "oc_..." }
-  Action: Generate new API key, invalidate old one
+```sql
+-- Remove hardcoded endpoint constraint
+ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_endpoint_check;
 ```
 
-### Credits Routes (`/credits/*`)
+Update `scripts/setup-db.ts` to remove the CHECK constraint from the CREATE TABLE statement:
 
-```
-GET /balance
-  Headers: Authorization: Bearer <api_key>
-  Response: { balance: 45.23, currency: "USD" }
+```sql
+-- BEFORE
+endpoint TEXT NOT NULL CHECK (endpoint IN ('xai', 'openai', 'amazon')),
 
-POST /topup
-  Headers: Authorization: Bearer <api_key>
-  Body: { amount: 50 }  // USD, minimum $10
-  Response: { checkoutUrl: "https://checkout.stripe.com/..." }
-  Action: Create Stripe session, return URL
-
-GET /usage
-  Headers: Authorization: Bearer <api_key>
-  Query: ?days=7 (optional, default 30)
-  Response: {
-    transactions: [...],
-    total: 12.34,
-    period: { start: "...", end: "..." }
-  }
-
-POST /webhook
-  Body: Stripe webhook payload
-  Action: Verify signature, record deposit on checkout.session.completed
-```
-
-### Payment Gateway Routes (`/api/*`)
-
-```
-POST /api/xai/*
-POST /api/openai/*
-POST /api/amazon/*
-  Headers: Authorization: Bearer <api_key>
-  Body: <passthrough to Corbits>
-  Response: <passthrough from Corbits>
-
-  Flow:
-  1. Validate API key
-  2. Check user has sufficient balance (estimate based on endpoint type)
-  3. Make x402 request to Corbits via @faremeter/fetch
-  4. Get actual cost from x402 response (cost_x402)
-  5. Get margin % from config (per-endpoint or global)
-  6. Calculate: cost_margin = cost_x402 * (margin_percent / 100)
-  7. Calculate: cost_total = cost_x402 + cost_margin
-  8. Record in transactions table (with full cost breakdown)
-  9. Deduct cost_total from user's credit balance
-  10. Return Corbits response unchanged
-```
-
-### Admin Routes (`/admin/*`)
-
-```
-POST /admin/login
-  Body: { password: string }
-  Response: { token: string }  // Short-lived admin session token
-  Action: Verify password hash, return session token
-
-GET /admin/config
-  Headers: Authorization: Bearer <admin_token>
-  Response: {
-    margin: { global: 30, perEndpoint: { xai: null, openai: null, amazon: null } },
-    walletAlertThreshold: 1000
-  }
-
-POST /admin/config
-  Headers: Authorization: Bearer <admin_token>
-  Body: { margin?: { global?: number, perEndpoint?: {...} }, walletAlertThreshold?: number }
-  Response: { success: true, config: {...} }
-  Action: Update config values
-
-GET /admin/users
-  Headers: Authorization: Bearer <admin_token>
-  Query: ?page=1&limit=50
-  Response: {
-    users: [{ id, email, balance, totalSpent, createdAt }],
-    total: 150
-  }
-
-GET /admin/metrics
-  Headers: Authorization: Bearer <admin_token>
-  Query: ?days=30
-  Response: {
-    totalRevenue: 1234.56,      // cost_total sum
-    totalCost: 863.19,          // cost_x402 sum
-    totalMargin: 371.37,        // cost_margin sum
-    totalTransactions: 5432,
-    walletBalance: 8500.00,     // Current USDC balance
-    activeUsers: 45,
-    topEndpoints: [{ endpoint: 'openai', count: 3200, revenue: 800 }, ...]
-  }
-
-POST /admin/setup
-  Body: { password: string }
-  Response: { success: true }
-  Action: Set initial admin password (only works if no password set)
-  Note: One-time setup endpoint
+-- AFTER
+endpoint TEXT NOT NULL,
 ```
 
 ---
 
-## File Structure
+## Dependency Changes
 
-```
-openclawd/
-├── .claude/
-│   ├── commands/
-│   │   └── openclawd.md              # Slash command router
-│   └── skills/
-│       └── openclawd/
-│           ├── skill.md              # Main skill instructions
-│           └── endpoints/
-│               ├── xai.md            # xAI/Grok API docs
-│               ├── openai.md         # OpenAI API docs
-│               └── crossmint.md      # Crossmint/Amazon docs
-├── apps/
-│   └── api/
-│       ├── src/
-│       │   ├── index.ts              # Hono app entry
-│       │   ├── routes/
-│       │   │   ├── auth.ts           # Magic link auth
-│       │   │   ├── credits.ts        # Balance, topup, webhook
-│       │   │   ├── gateway.ts        # Payment gateway (Corbits x402)
-│       │   │   └── admin.ts          # Admin dashboard API
-│       │   ├── services/
-│       │   │   ├── ledger.ts         # Credit operations
-│       │   │   ├── wallet.ts         # Solana/x402
-│       │   │   ├── stripe.ts         # Stripe integration
-│       │   │   ├── email.ts          # Magic link emails
-│       │   │   └── config.ts         # Admin config management
-│       │   ├── middleware/
-│       │   │   ├── auth.ts           # API key validation
-│       │   │   └── admin-auth.ts     # Admin password validation
-│       │   └── lib/
-│       │       ├── supabase.ts       # DB client
-│       │       └── errors.ts         # Error types
-│       ├── vercel.json               # Vercel config
-│       ├── package.json
-│       └── tsconfig.json
-├── packages/
-│   └── shared/
-│       ├── src/
-│       │   ├── types.ts              # Shared types
-│       │   └── constants.ts          # Shared constants
-│       ├── package.json
-│       └── tsconfig.json
-├── scripts/
-│   └── setup-db.ts                   # DB migration script
-├── .githooks/
-│   ├── pre-commit
-│   └── commit-msg
-├── CLAUDE.md
-├── CONVENTIONS.md
-├── Makefile
-├── package.json
-├── pnpm-workspace.yaml
-├── tsconfig.base.json
-└── tsconfig.json
+### pnpm-workspace.yaml catalog
+
+```yaml
+# REMOVE
+'@faremeter/fetch': '^0.15.0'
+'@faremeter/wallet-solana': '^0.15.0'
+'@faremeter/payment-solana': '^0.15.0'
+'@solana/web3.js': '^1.98.0'
+'@solana/spl-token': '^0.4.13'
+'bs58': '^6.0.0'
+
+# ADD
+'@faremeter/rides': '^0.15.0'
 ```
 
----
+### apps/api/package.json dependencies
 
-## Implementation Phases
-
-### Phase 1: Foundation (Wave 1-2)
-
-- Project scaffolding with faremeter conventions
-- Supabase schema setup
-- Shared types package
-
-### Phase 2: Backend Core (Wave 3-4)
-
-- Auth service (magic link)
-- Ledger service
-- Stripe integration
-
-### Phase 3: Wallet & Proxy (Wave 5-6)
-
-- Solana wallet setup
-- x402 integration
-- Corbits proxy routes
-
-### Phase 4: Skill (Wave 7-8)
-
-- Command router
-- Skill logic
-- Embedded endpoint docs
-
-### Phase 5: Integration & QA (Wave 9-10)
-
-- End-to-end testing
-- Documentation
-- Deployment config
-
----
-
-## Environment Variables
-
-### Backend (Vercel)
-
-```env
-# Supabase
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_KEY=eyJ...
-
-# Stripe
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-
-# Solana Wallet
-SOLANA_PRIVATE_KEY=base58_encoded_key
-SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
-
-# Email (for magic links)
-RESEND_API_KEY=re_...
-FROM_EMAIL=noreply@openclaw.ai
-
-# App
-API_BASE_URL=https://api.openclaw.ai
-```
-
-### Skill (Local)
-
-```
-~/.openclawd/config.json
+```json
 {
-  "apiKey": "oc_...",
-  "email": "user@example.com",
-  "apiBaseUrl": "https://api.openclaw.ai"
+  "dependencies": {
+    "@faremeter/rides": "catalog:",
+    "@faremeter/types": "catalog:",
+    "@hono/node-server": "catalog:",
+    "@corbitsclaw/shared": "workspace:*",
+    "@supabase/supabase-js": "catalog:",
+    "bcryptjs": "catalog:",
+    "hono": "catalog:",
+    "stripe": "catalog:"
+  }
 }
 ```
 
 ---
 
-## Security Considerations
+## Rename Mapping
 
-1. **API Keys**:
-   - Generated server-side using cryptographically secure random bytes
-   - Stored as bcrypt hashes in the database (never plain text)
-   - Only shown to user once on creation or refresh
-   - A visible prefix (e.g., "oc_abc12345...") is stored for identification
-   - Authentication uses bcrypt.compare() to verify against stored hash
-2. **Wallet Private Key**: Stored in Vercel secrets, never logged
-3. **Stripe**: All card data handled by Stripe, webhook signatures verified
-4. **Magic Links**: Expire in 15 minutes, single-use
-5. **Rate Limiting**: Basic limits to prevent abuse (future enhancement)
-6. **CORS**: Restrict to known origins in production
+All string replacements across the codebase:
+
+| Pattern           | Replacement             | Scope                    |
+| ----------------- | ----------------------- | ------------------------ |
+| `@openclawd/`     | `@corbitsclaw/`         | package.json, imports    |
+| `OpenClawd`       | `CorbitsClaw`           | prose, comments, docs    |
+| `openclawd`       | `corbitsclaw`           | paths, config, commands  |
+| `OPENCLAWD`       | `CORBITSCLAW`           | env vars                 |
+| `openclaw.ai`     | `clawdmeter.vercel.app` | URLs                     |
+| `api.openclaw.ai` | `clawdmeter.vercel.app` | URLs                     |
+| `oc_`             | `cc_`                   | API key prefix (auth.ts) |
+
+---
+
+## Build System Fixes
+
+### Makefile
+
+```makefile
+build:
+	pnpm -r build
+
+test:
+	pnpm -r test
+```
+
+### Formatting
+
+Run `make format` after all changes to fix prettier issues.
+
+---
+
+## Implementation Phases
+
+### Phase 1: Foundation (no dependencies)
+
+- Rename all openclawd -> corbitsclaw (string replacement + directory moves)
+- Fix Makefile build/test targets
+- Install corbits-skill to .claude/skills/corbits/
+
+### Phase 2: Backend refactor (depends on Phase 1)
+
+- Rewrite wallet.ts with @faremeter/rides
+- Create proxy-resolver.ts
+- Rewrite gateway.ts (dynamic route, fix path bug, remove debug routes)
+- Update shared types and constants
+- Update pnpm-workspace.yaml catalog + package.json deps
+
+### Phase 3: Skill refactor (depends on Phase 1)
+
+- Rewrite corbitsclaw skill (credit management only)
+- Rewrite corbitsclaw command router
+- Remove embedded endpoint docs
+
+### Phase 4: Docs + QA (depends on Phases 2, 3)
+
+- Update DEPLOYMENT.md, README.md, CLAUDE.md
+- Update database schema (setup-db.ts)
+- Run make format + make to verify build
+- Verify all tests pass

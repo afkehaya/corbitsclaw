@@ -71,7 +71,7 @@ export async function createCheckoutSession(
         price_data: {
           currency: 'usd',
           product_data: {
-            name: `OpenClawd Credits - $${amountUsd}`,
+            name: `CorbitsClaw Credits - $${amountUsd}`,
             description: `Purchase $${amountUsd} in API credits`,
           },
           unit_amount: priceWithMargin,

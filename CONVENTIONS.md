@@ -52,6 +52,7 @@ All shared dependencies are defined in `pnpm-workspace.yaml` under the `catalog`
 ### Package Configuration
 
 Each package should have its own `tsconfig.json` that:
+
 1. Extends `../../tsconfig.base.json`
 2. Specifies its own `include` patterns
 3. References dependent packages
@@ -85,23 +86,27 @@ make all       # lint + build + test
 ## Key Libraries
 
 ### Runtime
+
 - **hono**: Web framework for APIs
 - **@hono/node-server**: Node.js adapter for Hono
 - **arktype**: Runtime type validation
 - **dotenv**: Environment variable management
 
 ### Database & Services
+
 - **@supabase/supabase-js**: Supabase client
 - **stripe**: Payment processing
 - **resend**: Email service
 
 ### Faremeter Packages
+
 - **@faremeter/fetch**: HTTP client utilities
 - **@faremeter/wallet-solana**: Solana wallet integration
 - **@faremeter/payment-solana**: Solana payment processing
 - **@faremeter/types**: Shared type definitions
 
 ### Development
+
 - **tsx**: TypeScript execution
 - **tap**: Testing framework
 - **typescript**: TypeScript compiler
@@ -111,21 +116,25 @@ make all       # lint + build + test
 ## Conventions
 
 ### File Naming
+
 - TypeScript files: `kebab-case.ts`
 - Test files: `*.test.ts` or `*.spec.ts`
 - Configuration: `*.config.ts`
 
 ### Import/Export
+
 - Use verbatim module syntax (`import type` for types)
 - Prefer named exports over default exports
 - Use explicit file extensions in imports when needed
 
 ### Error Handling
+
 - Use arktype for runtime validation
 - Prefer Result types over throwing for expected errors
 - Use proper error types, not plain strings
 
 ### Testing
+
 - Use tap testing framework
 - Co-locate tests with source or in `__tests__` directory
 - Name test files with `.test.ts` suffix

@@ -1,4 +1,4 @@
-# CLAUDE.md - OpenClawd Multi-Agent Development Project
+# CLAUDE.md - CorbitsClaw Multi-Agent Development Project
 
 This project uses the multi-agent development workflow for parallel execution.
 
@@ -31,6 +31,7 @@ Uses **pnpm** (version 10.12.1+) with a centralized dependency catalog.
 **All package references must use the `catalog:` version specifier.** Never hardcode versions directly in package.json files. Versions are defined centrally in `pnpm-workspace.yaml`.
 
 To add a new dependency:
+
 1. Add the version to the `catalog` section in `pnpm-workspace.yaml`
 2. Reference the package with `"package-name": "catalog:"` in your package.json
 3. Run `pnpm install`
@@ -41,24 +42,25 @@ To add a new dependency:
 
 **Do not write custom functionality when a @faremeter package already provides the capability.**
 
-| Package                          | Purpose                                                |
-| -------------------------------- | ------------------------------------------------------ |
-| `@faremeter/types`               | Shared type definitions across the Faremeter ecosystem |
-| `@faremeter/info`                | Information and metadata utilities                     |
-| `@faremeter/facilitator`         | Payment facilitation logic                             |
-| `@faremeter/fetch`               | HTTP fetch utilities with x402 support                 |
-| `@faremeter/middleware`          | Middleware for Hono, Express frameworks                |
-| `@faremeter/rides`               | Simplified x402 endpoint access                        |
-| `@faremeter/payment-evm`         | EVM chain payment handling                             |
-| `@faremeter/payment-solana`      | Solana payment handling                                |
-| `@faremeter/wallet-evm`          | EVM wallet integration                                 |
-| `@faremeter/wallet-solana`       | Solana wallet integration                              |
+| Package                     | Purpose                                                |
+| --------------------------- | ------------------------------------------------------ |
+| `@faremeter/types`          | Shared type definitions across the Faremeter ecosystem |
+| `@faremeter/info`           | Information and metadata utilities                     |
+| `@faremeter/facilitator`    | Payment facilitation logic                             |
+| `@faremeter/fetch`          | HTTP fetch utilities with x402 support                 |
+| `@faremeter/middleware`     | Middleware for Hono, Express frameworks                |
+| `@faremeter/rides`          | Simplified x402 endpoint access                        |
+| `@faremeter/payment-evm`    | EVM chain payment handling                             |
+| `@faremeter/payment-solana` | Solana payment handling                                |
+| `@faremeter/wallet-evm`     | EVM wallet integration                                 |
+| `@faremeter/wallet-solana`  | Solana wallet integration                              |
 
 **Do not use experimental x402 payment schemes unless explicitly told to do so.**
 
 ### TypeScript
 
 Strict TypeScript is enforced with additional strictness flags:
+
 - `noUncheckedIndexedAccess`
 - `noImplicitOverride`
 - `exactOptionalPropertyTypes`
@@ -66,6 +68,7 @@ Strict TypeScript is enforced with additional strictness flags:
 See `tsconfig.base.json` for the full configuration.
 
 **Imports:**
+
 - Use explicit type imports (e.g., `import type { Foo }`) due to `verbatimModuleSyntax`
 - Use the `node:` prefix for Node.js built-in modules (e.g., `node:fs`, `node:path`)
 
@@ -114,6 +117,7 @@ Tests use the `tap` framework (node-tap) with TypeScript support via `@tapjs/tsx
 - Configure git hooks: `git config core.hooksPath .githooks`
 
 **Commit Messages:**
+
 - Summary line: Max 72 characters, non-empty
 - Blank line: Required between summary and body (if body exists)
 - Body lines: Max 72 characters each
@@ -121,6 +125,7 @@ Tests use the `tap` framework (node-tap) with TypeScript support via `@tapjs/tsx
 ### File Ownership
 
 When parallel agents are running:
+
 - `apps/api/src/routes/`, `apps/api/src/services/` → backend-agent
 - `apps/skill/src/` → frontend-agent (skill is user-facing)
 - `tests/`, `__tests__/` → qa-agent
@@ -132,6 +137,7 @@ If you need to modify a file outside your domain, check `.worktrees/.scratchpad/
 ### Communication
 
 Agents communicate via scratchpad files:
+
 ```
 .worktrees/.scratchpad/
 ├─ backend-agent.md
@@ -145,6 +151,7 @@ Before starting work, read relevant scratchpads to understand current state.
 ### Quality Gates
 
 Before marking a task complete:
+
 - [ ] Code compiles/runs without errors
 - [ ] `make` passes (lint, build, test)
 - [ ] No linting errors
@@ -165,6 +172,7 @@ Before marking a task complete:
 ## Task System
 
 This project uses Claude's native Task system:
+
 - Tasks have dependencies (blockedBy)
 - Parallel tasks run simultaneously via background agents
 - Progress tracked via TaskList / TaskUpdate
